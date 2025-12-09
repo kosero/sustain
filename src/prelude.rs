@@ -4,7 +4,7 @@ pub use crate::{
         components::Component,
         entity::{Entity, Transform},
     },
-    graphics::sprite::Sprite,
+    graphics::{AnimatedSprite, Sprite, Texture2D},
     math::Vector2,
 };
 pub use raylib::{
