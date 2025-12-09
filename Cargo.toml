@@ -1,0 +1,15 @@
+[package]
+name = "sustain"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam = "0.30.9"
+sdl2 = { version = "0.38.0", features = [
+    "bundled",
+    "image",
+    "mixer",
+    "ttf",
+    "gfx",
+    "unsafe_textures",
+] }
