@@ -33,6 +33,10 @@ typedef struct {
 
   // System
   bool shouldExit;
+  bool showWarnMessageBox;
+  char warnTitle[64];
+  char warnMessage[256];
+  char warnOptions[64];
 } EditorState;
 
 void EditorState_Init(void);

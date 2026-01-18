@@ -20,7 +20,6 @@ void EditorState_Init(void) {
   state.hierarchyScrollIndex = 0;
   state.hierarchyActiveItem = 0;
 
-  // Initialize hierarchy names to match the GUI list
   state.hierarchyNodeCount = 7;
   strcpy(state.hierarchyNodeNames[0], "Scene Root");
   strcpy(state.hierarchyNodeNames[1], "Map Layer 1");

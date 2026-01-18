@@ -73,6 +73,7 @@ static void render(void) {
   Gui_DrawHierarchy();
   Gui_DrawInspector();
   Gui_DrawBottomPanel();
+  Gui_DrawWarnMessageBox();
 
   if (state->activeMenuIndex != -1)
     GuiUnlock();

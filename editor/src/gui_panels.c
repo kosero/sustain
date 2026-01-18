@@ -5,6 +5,7 @@
 #include "sustain/ui/styles/style_amber.h"
 #include <raylib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void Gui_Init(void) {
   GuiLoadStyleAmber();
@@ -62,11 +63,11 @@ void Gui_DrawToolbar(void) {
 
   float playX = layout->toolbar.width / 2 - 60;
   if (GuiButton((Rectangle){playX, layout->toolbar.y + 2, 40, 28}, "#131#")) {
-    // TODO: Play clicked
+    Gui_ShowAlert("[WARN]", "Not implemented yet!", "OK");
   }
   if (GuiButton((Rectangle){playX + 45, layout->toolbar.y + 2, 40, 28},
                 "#133#")) {
-    // TODO: Pause clicked
+    Gui_ShowAlert("[WARN]", "Not implemented yet!", "OK");
   }
 }
 
@@ -89,8 +90,8 @@ void Gui_DrawHierarchy(void) {
 
   GuiListView((Rectangle){content.x + 5, content.y + 5, content.width - 10,
                           content.height / 2 - 10},
-              listText, // Artık dinamik
-              &state->hierarchyScrollIndex, &state->hierarchyActiveItem);
+              listText, &state->hierarchyScrollIndex,
+              &state->hierarchyActiveItem);
 
   GuiLine(
       (Rectangle){content.x, content.y + content.height / 2, content.width, 1},
@@ -176,7 +177,10 @@ void Gui_DrawInspector(void) {
 
   GuiLabel((Rectangle){startX, startY, width, 20}, "Script Component");
   startY += 25;
-  GuiButton((Rectangle){startX, startY, width, 24}, "Open Script");
+
+  if (GuiButton((Rectangle){startX, startY, width, 24}, "Open Script")) {
+    Gui_ShowAlert("[WARN]", "Not implemented yet!", "OK");
+  }
 }
 
 void Gui_DrawBottomPanel(void) {
@@ -245,7 +249,6 @@ void Gui_DrawSceneView(void) {
     DrawLine(startX, y, endX, y, gridColor);
   }
 
-  // Only show debug text if we are actually allowed to drag the scene
   if (state->isDraggingScene) {
     char buff[64];
     sprintf(buff, "Offset: %.0f, %.0f | Zoom: %.1fx", state->sceneOffset.x,
@@ -314,8 +317,35 @@ void Gui_DrawDropdowns(void) {
                                      menuWidth - 4, itemHeight},
                          items[i])) {
         state->activeMenuIndex = -1;
+        Gui_ShowAlert("[WARN]", "Not implemented yet!", "OK");
       }
     }
     DrawRectangleLinesEx(bounds, 1, Fade(BLACK, 0.5f));
   }
+}
+
+void Gui_ShowAlert(const char *title, const char *message,
+                   const char *options) {
+  EditorState *state = EditorState_Get();
+  strncpy(state->warnTitle, title, 63);
+  strncpy(state->warnMessage, message, 255);
+  strncpy(state->warnOptions, options, 63);
+  state->showWarnMessageBox = true;
+}
+
+int Gui_DrawWarnMessageBox(void) {
+  EditorState *state = EditorState_Get();
+
+  if (!state->showWarnMessageBox)
+    return -1;
+
+  int result =
+      GuiMessageBox((Rectangle){GetScreenWidth() / 2.0f - 150,
+                                GetScreenHeight() / 2.0f - 60, 300, 120},
+                    state->warnTitle, state->warnMessage, state->warnOptions);
+
+  if (result >= 0) {
+    state->showWarnMessageBox = false;
+  }
+  return result;
 }
