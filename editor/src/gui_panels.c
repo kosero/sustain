@@ -80,10 +80,16 @@ void Gui_DrawHierarchy(void) {
   content.y += 24;
   content.height -= 24;
 
+  char listText[1024] = {0};
+  for (int i = 0; i < state->hierarchyNodeCount; i++) {
+    strcat(listText, state->hierarchyNodeNames[i]);
+    if (i < state->hierarchyNodeCount - 1)
+      strcat(listText, ";");
+  }
+
   GuiListView((Rectangle){content.x + 5, content.y + 5, content.width - 10,
                           content.height / 2 - 10},
-              "Scene Root;> Map Layer 1;> Map Layer 2;> Objects;  "
-              "Player_Start;  Enemy_Slime;> UI Layer",
+              listText, // Artık dinamik
               &state->hierarchyScrollIndex, &state->hierarchyActiveItem);
 
   GuiLine(
@@ -108,7 +114,24 @@ void Gui_DrawInspector(void) {
   float startY = layout->rightPanel.y + 30;
   float width = layout->rightPanel.width - 20;
 
-  GuiLabel((Rectangle){startX, startY, width, 20}, "Selected: obj 1");
+  const char *selectedName = "None";
+  if (state->hierarchyActiveItem >= 0 &&
+      state->hierarchyActiveItem < state->hierarchyNodeCount) {
+
+    if (state->lastSelected != state->hierarchyActiveItem) {
+      strncpy(state->objectNameBuffer,
+              state->hierarchyNodeNames[state->hierarchyActiveItem], 63);
+      state->objectNameBuffer[63] = '\0';
+
+      state->lastSelected = state->hierarchyActiveItem;
+    }
+
+    selectedName = state->hierarchyNodeNames[state->hierarchyActiveItem];
+  }
+
+  char labelBuffer[64];
+  sprintf(labelBuffer, "Selected: %s", selectedName);
+  GuiLabel((Rectangle){startX, startY, width, 20}, labelBuffer);
   startY += 25;
 
   GuiLine((Rectangle){startX, startY, width, 1}, NULL);
@@ -120,6 +143,11 @@ void Gui_DrawInspector(void) {
   if (GuiTextBox(textBoxBounds, state->objectNameBuffer, 64,
                  state->nameEditMode)) {
     state->nameEditMode = !state->nameEditMode;
+    if (!state->nameEditMode) {
+      strncpy(state->hierarchyNodeNames[state->hierarchyActiveItem],
+              state->objectNameBuffer, 63);
+      state->hierarchyNodeNames[state->hierarchyActiveItem][63] = '\0';
+    }
   }
 
   if (state->nameEditMode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -217,7 +245,8 @@ void Gui_DrawSceneView(void) {
     DrawLine(startX, y, endX, y, gridColor);
   }
 
-  if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+  // Only show debug text if we are actually allowed to drag the scene
+  if (state->isDraggingScene) {
     char buff[64];
     sprintf(buff, "Offset: %.0f, %.0f | Zoom: %.1fx", state->sceneOffset.x,
             state->sceneOffset.y, state->zoomLevel);

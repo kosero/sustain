@@ -24,6 +24,9 @@ typedef struct {
   // Hierarchy
   int hierarchyScrollIndex;
   int hierarchyActiveItem;
+  char hierarchyNodeNames[64][64];
+  int hierarchyNodeCount;
+  int lastSelected;
 
   // Project
   int activeTab; // 0=Assets, 1=Console
