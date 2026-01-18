@@ -1,5 +1,9 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef SUSTAIN_GRAPHICS_WINDOW_H
+#define SUSTAIN_GRAPHICS_WINDOW_H
+
+#if defined(WIN32) && !defined(_DEBUG)
+#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
 
 void window_init(const int width, const int height, const char *title,
                  const int fullscreen);

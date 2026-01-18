@@ -1,33 +1,94 @@
-#include "sustain/core/window.h"
-#include "sustain/graphics/sprite.h"
+#include "sustain/ui/raygui.h"
 #include <raylib.h>
-#include <sys/stat.h>
 
-static Texture2D tex;
-static SpriteManager smgr;
-static int shouldExit = 0;
+#include "editor_layout.h"
+#include "editor_state.h"
+#include "gui_panels.h"
 
-static void update(void) {}
+extern void window_init(int width, int height, const char *title,
+                        int target_fps);
+extern void window_close(void);
+
+static void update(void) {
+  EditorState *state = EditorState_Get();
+
+  EditorLayout_Update(GetScreenWidth(), GetScreenHeight());
+
+  // Close menu if clicked outside
+  EditorLayout *layout = EditorLayout_Get();
+  if (state->activeMenuIndex != -1 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    Vector2 mouse = GetMousePosition();
+    if (mouse.y > layout->topbar.height &&
+        mouse.y < layout->topbar.height + 150) {
+      bool overMenu = (mouse.x >= 0 && mouse.x <= 250 && mouse.y <= 150);
+      if (!overMenu)
+        state->activeMenuIndex = -1;
+    } else if (mouse.y > layout->topbar.height) {
+      state->activeMenuIndex = -1;
+    }
+  }
+
+  // Scene Input: Panning & Zoom
+  bool mouseOverScene =
+      CheckCollisionPointRec(GetMousePosition(), layout->centerView);
+
+  if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) && mouseOverScene) {
+    state->isDraggingScene = true;
+  }
+
+  if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) {
+    state->isDraggingScene = false;
+  }
+
+  if (state->isDraggingScene) {
+    Vector2 delta = GetMouseDelta();
+    state->sceneOffset.x += delta.x;
+    state->sceneOffset.y += delta.y;
+  }
+
+  if (mouseOverScene) {
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0) {
+      state->zoomLevel += wheel * 0.1f;
+      if (state->zoomLevel < 0.2f)
+        state->zoomLevel = 0.2f;
+      if (state->zoomLevel > 5.0f)
+        state->zoomLevel = 5.0f;
+    }
+  }
+}
+
 static void render(void) {
-  ClearBackground(BLACK);
-  sprite_render_all(&smgr);
-  sprite_render_debug(&smgr);
+  EditorState *state = EditorState_Get();
+
+  ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+
+  Gui_DrawSceneView();
+  Gui_DrawMenuBar();
+
+  if (state->activeMenuIndex != -1)
+    GuiLock();
+
+  Gui_DrawToolbar();
+  Gui_DrawHierarchy();
+  Gui_DrawInspector();
+  Gui_DrawBottomPanel();
+
+  if (state->activeMenuIndex != -1)
+    GuiUnlock();
+
+  Gui_DrawDropdowns();
 }
 
 int main(void) {
-  window_init(1024, 800, "Sustain Editor", 0);
+  window_init(1280, 800, "Sustain Editor", 0);
 
-  sprite_init_pool(&smgr);
-  sprite_set_debug_mode(&smgr, SPRITE_DEBUG_BOX | SPRITE_DEBUG_NAME |
-                                   SPRITE_DEBUG_ORIGIN);
+  EditorState_Init();
+  Gui_Init(); // Loads style
 
-  tex = LoadTexture("assets/imgs/cube.png");
-  Sprite *player = sprite_create(&smgr, &tex, "Player");
-  player->scale = 5;
-  player->position = (Vector2){100, 100};
-  player->is_dirty = true;
+  EditorState *state = EditorState_Get();
 
-  while (!WindowShouldClose() && !shouldExit) {
+  while (!WindowShouldClose() && !state->shouldExit) {
     update();
 
     BeginDrawing();

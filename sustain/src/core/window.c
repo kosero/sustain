@@ -1,3 +1,4 @@
+#define RAYGUI_IMPLEMENTATION
 #include "sustain/core/window.h"
 #include <raylib.h>
 

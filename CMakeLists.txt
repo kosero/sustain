@@ -7,6 +7,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CUSTOM_GLAD_REDEF ON)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options(-O3 -march=native -ffast-math -funroll-loops)
+endif()
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result OUTPUT output)
+if(result)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(WARNING "IPO is not supported: ${output}")
+endif()
+
 add_subdirectory(external/raylib)
 
 file(GLOB_RECURSE SUSTAIN_SOURCES "sustain/src/*.c")
@@ -16,14 +28,16 @@ target_include_directories(sustain PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sustain/include>
     $<INSTALL_INTERFACE:include>
     external/raylib/src
-    external/cimgui
 )
 
 target_link_libraries(sustain PUBLIC raylib)
 
-file(GLOB_RECURSE EDITOR_SOURCES "editor/src/*.c")
-
-add_executable(sustain_editor ${EDITOR_SOURCES})
+add_executable(sustain_editor 
+    editor/src/main.c
+    editor/src/editor_state.c
+    editor/src/editor_layout.c
+    editor/src/gui_panels.c
+)
 
 target_include_directories(sustain_editor PRIVATE
     editor/include
