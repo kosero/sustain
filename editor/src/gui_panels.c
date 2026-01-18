@@ -1,8 +1,8 @@
 #include "gui_panels.h"
 #include "editor_layout.h"
 #include "editor_state.h"
+#define RAYGUI_IMPLEMENTATION
 #include "sustain/ui/raygui.h"
-#include "sustain/ui/styles/style_amber.h"
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
