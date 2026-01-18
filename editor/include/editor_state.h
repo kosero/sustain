@@ -27,6 +27,8 @@ typedef struct {
   char hierarchyNodeNames[64][64];
   int hierarchyNodeCount;
   int lastSelected;
+  bool showHierarchyContextMenu;
+  Vector2 hierarchyContextMenuPos;
 
   // Project
   int activeTab; // 0=Assets, 1=Console

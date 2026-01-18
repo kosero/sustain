@@ -19,6 +19,8 @@ void EditorState_Init(void) {
 
   state.hierarchyScrollIndex = 0;
   state.hierarchyActiveItem = 0;
+  state.showHierarchyContextMenu = false;
+  state.hierarchyContextMenuPos = (Vector2){0, 0};
 
   state.hierarchyNodeCount = 7;
   strcpy(state.hierarchyNodeNames[0], "Scene Root");

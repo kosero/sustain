@@ -88,10 +88,20 @@ void Gui_DrawHierarchy(void) {
       strcat(listText, ";");
   }
 
-  GuiListView((Rectangle){content.x + 5, content.y + 5, content.width - 10,
-                          content.height / 2 - 10},
-              listText, &state->hierarchyScrollIndex,
+  Rectangle listViewBounds = {content.x + 5, content.y + 5, content.width - 10,
+                              content.height / 2 - 10};
+
+  GuiListView(listViewBounds, listText, &state->hierarchyScrollIndex,
               &state->hierarchyActiveItem);
+
+  // Right-click detection on the list view
+  if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+    Vector2 mousePos = GetMousePosition();
+    if (CheckCollisionPointRec(mousePos, listViewBounds)) {
+      state->showHierarchyContextMenu = true;
+      state->hierarchyContextMenuPos = mousePos;
+    }
+  }
 
   GuiLine(
       (Rectangle){content.x, content.y + content.height / 2, content.width, 1},
@@ -141,17 +151,32 @@ void Gui_DrawInspector(void) {
   GuiLabel((Rectangle){startX, startY, 60, 20}, "Name:");
   Rectangle textBoxBounds = {startX + 50, startY, width - 50, 20};
 
+  // Check if a valid item is selected
+  bool hasValidSelection =
+      (state->hierarchyActiveItem >= 0 &&
+       state->hierarchyActiveItem < state->hierarchyNodeCount);
+
+  // Disable text box if no valid selection
+  if (!hasValidSelection) {
+    GuiDisable();
+  }
+
   if (GuiTextBox(textBoxBounds, state->objectNameBuffer, 64,
                  state->nameEditMode)) {
     state->nameEditMode = !state->nameEditMode;
-    if (!state->nameEditMode) {
+    if (!state->nameEditMode && hasValidSelection) {
       strncpy(state->hierarchyNodeNames[state->hierarchyActiveItem],
               state->objectNameBuffer, 63);
       state->hierarchyNodeNames[state->hierarchyActiveItem][63] = '\0';
     }
   }
 
-  if (state->nameEditMode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+  if (!hasValidSelection) {
+    GuiEnable();
+  }
+
+  if (state->nameEditMode && hasValidSelection &&
+      IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
     if (!CheckCollisionPointRec(GetMousePosition(), textBoxBounds)) {
       state->nameEditMode = false;
     }
@@ -331,6 +356,92 @@ void Gui_ShowAlert(const char *title, const char *message,
   strncpy(state->warnMessage, message, 255);
   strncpy(state->warnOptions, options, 63);
   state->showWarnMessageBox = true;
+}
+
+void Gui_DrawHierarchyContextMenu(void) {
+  EditorState *state = EditorState_Get();
+
+  if (!state->showHierarchyContextMenu)
+    return;
+
+  const char *menuItems[] = {"Create Empty", "Delete", "Rename", "Duplicate"};
+  int itemCount = 4;
+  float menuWidth = 140;
+  float itemHeight = 24;
+  float menuHeight = itemCount * itemHeight + 4;
+
+  Rectangle menuBounds = {state->hierarchyContextMenuPos.x,
+                          state->hierarchyContextMenuPos.y, menuWidth,
+                          menuHeight};
+
+  GuiPanel(menuBounds, NULL);
+
+  for (int i = 0; i < itemCount; i++) {
+    Rectangle itemBounds = {menuBounds.x + 2, menuBounds.y + 2 + i * itemHeight,
+                            menuWidth - 4, itemHeight};
+
+    if (GuiLabelButton(itemBounds, menuItems[i])) {
+      switch (i) {
+      case 0: // Create Empty
+        if (state->hierarchyNodeCount < 64) {
+          char newName[64];
+          sprintf(newName, "New Object %d", state->hierarchyNodeCount);
+          strcpy(state->hierarchyNodeNames[state->hierarchyNodeCount], newName);
+          state->hierarchyNodeCount++;
+        }
+        state->showHierarchyContextMenu = false;
+        break;
+
+      case 1: // Delete
+        if (state->hierarchyActiveItem >= 0 &&
+            state->hierarchyActiveItem < state->hierarchyNodeCount) {
+          for (int j = state->hierarchyActiveItem;
+               j < state->hierarchyNodeCount - 1; j++) {
+            strcpy(state->hierarchyNodeNames[j],
+                   state->hierarchyNodeNames[j + 1]);
+          }
+          state->hierarchyNodeCount--;
+          if (state->hierarchyActiveItem >= state->hierarchyNodeCount) {
+            state->hierarchyActiveItem = state->hierarchyNodeCount - 1;
+          }
+        }
+        state->showHierarchyContextMenu = false;
+        break;
+
+      case 2: // Rename
+        if (state->hierarchyActiveItem >= 0 &&
+            state->hierarchyActiveItem < state->hierarchyNodeCount) {
+          state->nameEditMode = true;
+        }
+        state->showHierarchyContextMenu = false;
+        break;
+
+      case 3: // Duplicate
+        if (state->hierarchyActiveItem >= 0 &&
+            state->hierarchyActiveItem < state->hierarchyNodeCount &&
+            state->hierarchyNodeCount < 64) {
+          char duplicateName[64];
+          sprintf(duplicateName, "%s (Copy)",
+                  state->hierarchyNodeNames[state->hierarchyActiveItem]);
+          strcpy(state->hierarchyNodeNames[state->hierarchyNodeCount],
+                 duplicateName);
+          state->hierarchyNodeCount++;
+        }
+        state->showHierarchyContextMenu = false;
+        break;
+      }
+    }
+  }
+
+  DrawRectangleLinesEx(menuBounds, 1, Fade(BLACK, 0.5f));
+
+  if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) ||
+      IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+    Vector2 mousePos = GetMousePosition();
+    if (!CheckCollisionPointRec(mousePos, menuBounds)) {
+      state->showHierarchyContextMenu = false;
+    }
+  }
 }
 
 int Gui_DrawWarnMessageBox(void) {

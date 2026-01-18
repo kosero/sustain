@@ -66,7 +66,7 @@ static void render(void) {
   Gui_DrawSceneView();
   Gui_DrawMenuBar();
 
-  if (state->activeMenuIndex != -1)
+  if (state->activeMenuIndex != -1 || state->showHierarchyContextMenu)
     GuiLock();
 
   Gui_DrawToolbar();
@@ -75,10 +75,11 @@ static void render(void) {
   Gui_DrawBottomPanel();
   Gui_DrawWarnMessageBox();
 
-  if (state->activeMenuIndex != -1)
+  if (state->activeMenuIndex != -1 || state->showHierarchyContextMenu)
     GuiUnlock();
 
   Gui_DrawDropdowns();
+  Gui_DrawHierarchyContextMenu();
 }
 
 int main(void) {
