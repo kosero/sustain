@@ -18,13 +18,14 @@ static void update(void) {
   EditorLayout *layout = EditorLayout_Get();
   if (state->activeMenuIndex != -1 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
     Vector2 mouse = GetMousePosition();
-    if (mouse.y > layout->topbar.height &&
-        mouse.y < layout->topbar.height + 150) {
-      bool overMenu = (mouse.x >= 0 && mouse.x <= 250 && mouse.y <= 150);
+    if (mouse.y > layout->topbar.height) {
+      float startX = state->activeMenuIndex * 60.0f;
+      float endX = startX + 120.0f;
+      float endY = layout->topbar.height + 200.0f;
+
+      bool overMenu = (mouse.x >= startX && mouse.x <= endX && mouse.y <= endY);
       if (!overMenu)
         state->activeMenuIndex = -1;
-    } else if (mouse.y > layout->topbar.height) {
-      state->activeMenuIndex = -1;
     }
   }
 
@@ -66,20 +67,21 @@ static void render(void) {
   Gui_DrawSceneView();
   Gui_DrawMenuBar();
 
-  if (state->activeMenuIndex != -1 || state->showHierarchyContextMenu)
+  if (state->activeMenuIndex != -1 || state->showHierarchyContextMenu ||
+      state->showWarnMessageBox)
     GuiLock();
 
   Gui_DrawToolbar();
   Gui_DrawHierarchy();
   Gui_DrawInspector();
   Gui_DrawBottomPanel();
-  Gui_DrawWarnMessageBox();
-
-  if (state->activeMenuIndex != -1 || state->showHierarchyContextMenu)
+  if (state->activeMenuIndex != -1 || state->showHierarchyContextMenu ||
+      state->showWarnMessageBox)
     GuiUnlock();
 
   Gui_DrawDropdowns();
   Gui_DrawHierarchyContextMenu();
+  Gui_DrawWarnMessageBox();
 }
 
 int main(void) {

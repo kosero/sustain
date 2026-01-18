@@ -30,6 +30,11 @@ typedef struct {
   bool showHierarchyContextMenu;
   Vector2 hierarchyContextMenuPos;
 
+  // Clipboard
+  char clipboardBuffer[64];
+  bool hasClipboardData;
+  bool clipboardIsCut;
+
   // Project
   int activeTab; // 0=Assets, 1=Console
 
@@ -39,6 +44,7 @@ typedef struct {
   char warnTitle[64];
   char warnMessage[256];
   char warnOptions[64];
+  bool showGridLines;
 } EditorState;
 
 void EditorState_Init(void);

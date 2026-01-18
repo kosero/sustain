@@ -18,7 +18,7 @@ void EditorState_Init(void) {
   state.transformY = 0;
 
   state.hierarchyScrollIndex = 0;
-  state.hierarchyActiveItem = 0;
+  state.hierarchyActiveItem = -1;
   state.showHierarchyContextMenu = false;
   state.hierarchyContextMenuPos = (Vector2){0, 0};
 
@@ -31,9 +31,13 @@ void EditorState_Init(void) {
   strcpy(state.hierarchyNodeNames[5], "Enemy_Slime");
   strcpy(state.hierarchyNodeNames[6], "UI Layer");
 
+  state.hasClipboardData = false;
+  state.clipboardIsCut = false;
+
   state.activeTab = 0;
 
   state.shouldExit = false;
+  state.showGridLines = true;
 }
 
 EditorState *EditorState_Get(void) { return &state; }

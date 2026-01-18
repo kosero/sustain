@@ -12,5 +12,6 @@ void Gui_DrawDropdowns(void);
 void Gui_DrawHierarchyContextMenu(void);
 void Gui_ShowAlert(const char *title, const char *message, const char *options);
 int Gui_DrawWarnMessageBox(void);
+int Gui_DrawAboutDialog(void);
 
 #endif

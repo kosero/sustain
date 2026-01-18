@@ -10,7 +10,6 @@
 void Gui_Init(void) {
   GuiLoadStyleAmber();
   GuiSetStyle(DEFAULT, TEXT_SIZE, 18);
-  // Set ListView text to be left-aligned instead of centered
   GuiSetStyle(LISTVIEW, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 }
 
@@ -100,8 +99,11 @@ void Gui_DrawHierarchy(void) {
   if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
     Vector2 mousePos = GetMousePosition();
     if (CheckCollisionPointRec(mousePos, listViewBounds)) {
-      state->showHierarchyContextMenu = true;
-      state->hierarchyContextMenuPos = mousePos;
+      if (state->hierarchyActiveItem >= 0 &&
+          state->hierarchyActiveItem < state->hierarchyNodeCount) {
+        state->showHierarchyContextMenu = true;
+        state->hierarchyContextMenuPos = mousePos;
+      }
     }
   }
 
@@ -252,14 +254,17 @@ void Gui_DrawSceneView(void) {
   int endX = startX + (int)layout->centerView.width;
   int endY = startY + (int)layout->centerView.height;
 
-  for (int i = -1; i < cols; i++) {
-    int x = startX + i * spacing + offX;
-    DrawLine(x, startY, x, endY, gridColor);
-  }
+  // Only draw grid if enabled
+  if (state->showGridLines) {
+    for (int i = -1; i < cols; i++) {
+      int x = startX + i * spacing + offX;
+      DrawLine(x, startY, x, endY, gridColor);
+    }
 
-  for (int i = -1; i < rows; i++) {
-    int y = startY + i * spacing + offY;
-    DrawLine(startX, y, endX, y, gridColor);
+    for (int i = -1; i < rows; i++) {
+      int y = startY + i * spacing + offY;
+      DrawLine(startX, y, endX, y, gridColor);
+    }
   }
 
   if (state->isDraggingScene) {
@@ -289,11 +294,11 @@ void Gui_DrawDropdowns(void) {
 
   const char *fileItems[] = {"New Project", "Open...", "Save", "Save As...",
                              "Exit"};
-  const char *editItems[] = {"Undo", "Redo", "Cut", "Copy", "Paste"};
+  const char *editItems[] = {"Delete", "---", "Cut", "Copy", "Paste"};
   const char *viewItems[] = {"Zoom In", "Zoom Out", "Reset Zoom",
                              "Toggle Grid"};
   const char *gameItems[] = {"Play Scene", "Stop", "Build & Run"};
-  const char *helpItems[] = {"Documentation", "About Sustain"};
+  const char *helpItems[] = {"About Sustain"};
 
   int count = 0;
   const char **items = NULL;
@@ -317,7 +322,7 @@ void Gui_DrawDropdowns(void) {
     break;
   case 4:
     items = helpItems;
-    count = 2;
+    count = 1;
     break;
   }
 
@@ -326,11 +331,130 @@ void Gui_DrawDropdowns(void) {
     GuiPanel(bounds, NULL);
 
     for (int i = 0; i < count; i++) {
-      if (GuiLabelButton((Rectangle){startX + 2, startY + 1 + i * itemHeight,
-                                     menuWidth - 4, itemHeight},
-                         items[i])) {
+      Rectangle itemBounds = {startX + 2, startY + 1 + i * itemHeight,
+                              menuWidth - 4, itemHeight};
+
+      if (strcmp(items[i], "---") == 0) {
+        GuiLine((Rectangle){itemBounds.x, itemBounds.y + itemHeight / 2,
+                            itemBounds.width, 1},
+                NULL);
+        continue;
+      }
+
+      if (GuiLabelButton(itemBounds, items[i])) {
+        int menuIndex = state->activeMenuIndex;
         state->activeMenuIndex = -1;
-        Gui_ShowAlert("[WARN]", "Not implemented yet!", "OK");
+
+        // File menu
+        if (menuIndex == 0) {
+          if (i == 4) { // Exit
+            state->shouldExit = true;
+          } else {
+            Gui_ShowAlert("[INFO]", "Not implemented yet!", "OK");
+          }
+        }
+        // Edit menu
+        else if (menuIndex == 1) {
+          switch (i) {
+          case 0: // Delete
+            if (state->hierarchyActiveItem >= 0 &&
+                state->hierarchyActiveItem < state->hierarchyNodeCount) {
+              for (int j = state->hierarchyActiveItem;
+                   j < state->hierarchyNodeCount - 1; j++) {
+                strcpy(state->hierarchyNodeNames[j],
+                       state->hierarchyNodeNames[j + 1]);
+              }
+              state->hierarchyNodeCount--;
+              if (state->hierarchyActiveItem >= state->hierarchyNodeCount) {
+                state->hierarchyActiveItem = state->hierarchyNodeCount - 1;
+              }
+              // Clear clipboard if we deleted the cut item
+              if (state->clipboardIsCut) {
+                state->hasClipboardData = false;
+                state->clipboardIsCut = false;
+              }
+            }
+            break;
+          case 2: // Cut
+            if (state->hierarchyActiveItem >= 0 &&
+                state->hierarchyActiveItem < state->hierarchyNodeCount) {
+              strcpy(state->clipboardBuffer,
+                     state->hierarchyNodeNames[state->hierarchyActiveItem]);
+              state->hasClipboardData = true;
+              state->clipboardIsCut = true;
+            }
+            break;
+          case 3: // Copy
+            if (state->hierarchyActiveItem >= 0 &&
+                state->hierarchyActiveItem < state->hierarchyNodeCount) {
+              strcpy(state->clipboardBuffer,
+                     state->hierarchyNodeNames[state->hierarchyActiveItem]);
+              state->hasClipboardData = true;
+              state->clipboardIsCut = false;
+            }
+            break;
+          case 4: // Paste
+            if (state->hasClipboardData && state->hierarchyNodeCount < 64) {
+              // If cut, delete the original
+              if (state->clipboardIsCut) {
+                // Find and delete the original
+                for (int j = 0; j < state->hierarchyNodeCount; j++) {
+                  if (strcmp(state->hierarchyNodeNames[j],
+                             state->clipboardBuffer) == 0) {
+                    for (int k = j; k < state->hierarchyNodeCount - 1; k++) {
+                      strcpy(state->hierarchyNodeNames[k],
+                             state->hierarchyNodeNames[k + 1]);
+                    }
+                    state->hierarchyNodeCount--;
+                    break;
+                  }
+                }
+                state->clipboardIsCut = false;
+              }
+              // Paste (add copy or moved item)
+              strcpy(state->hierarchyNodeNames[state->hierarchyNodeCount],
+                     state->clipboardBuffer);
+              state->hierarchyActiveItem = state->hierarchyNodeCount;
+              state->hierarchyNodeCount++;
+            }
+            break;
+          }
+        }
+        // View menu
+        else if (menuIndex == 2) {
+          switch (i) {
+          case 0: // Zoom In
+            state->zoomLevel += 0.2f;
+            if (state->zoomLevel > 5.0f)
+              state->zoomLevel = 5.0f;
+            break;
+          case 1: // Zoom Out
+            state->zoomLevel -= 0.2f;
+            if (state->zoomLevel < 0.2f)
+              state->zoomLevel = 0.2f;
+            break;
+          case 2: // Reset Zoom
+            state->zoomLevel = 1.0f;
+            break;
+          case 3: // Toggle Grid
+            state->showGridLines = !state->showGridLines;
+            break;
+          }
+        }
+        // Game menu
+        else if (menuIndex == 3) {
+          Gui_ShowAlert("[INFO]", "Not implemented yet!", "OK");
+        }
+        // Help menu
+        else if (menuIndex == 4) {
+          if (i == 0) { // About Sustain
+            Gui_ShowAlert("#191# About Sustain",
+                          "Sustain Engine Editor\n"
+                          "Version 0.1.0 Alpha\n\n"
+                          "A 2D game engine and editor",
+                          "OK");
+          }
+        }
       }
     }
     DrawRectangleLinesEx(bounds, 1, Fade(BLACK, 0.5f));
@@ -439,8 +563,8 @@ int Gui_DrawWarnMessageBox(void) {
     return -1;
 
   int result =
-      GuiMessageBox((Rectangle){GetScreenWidth() / 2.0f - 150,
-                                GetScreenHeight() / 2.0f - 60, 300, 120},
+      GuiMessageBox((Rectangle){GetScreenWidth() / 2.0f - 200,
+                                GetScreenHeight() / 2.0f - 100, 400, 200},
                     state->warnTitle, state->warnMessage, state->warnOptions);
 
   if (result >= 0) {
