@@ -10,6 +10,8 @@
 void Gui_Init(void) {
   GuiLoadStyleAmber();
   GuiSetStyle(DEFAULT, TEXT_SIZE, 18);
+  // Set ListView text to be left-aligned instead of centered
+  GuiSetStyle(LISTVIEW, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 }
 
 void Gui_DrawMenuBar(void) {
@@ -121,27 +123,28 @@ void Gui_DrawInspector(void) {
 
   GuiPanel(layout->rightPanel, "Inspector");
 
+  bool hasValidSelection =
+      (state->hierarchyActiveItem >= 0 &&
+       state->hierarchyActiveItem < state->hierarchyNodeCount);
+
+  if (!hasValidSelection) {
+    return;
+  }
+
+  if (state->lastSelected != state->hierarchyActiveItem) {
+    strncpy(state->objectNameBuffer,
+            state->hierarchyNodeNames[state->hierarchyActiveItem], 63);
+    state->objectNameBuffer[63] = '\0';
+    state->lastSelected = state->hierarchyActiveItem;
+  }
+
   float startX = layout->rightPanel.x + 10;
   float startY = layout->rightPanel.y + 30;
   float width = layout->rightPanel.width - 20;
 
-  const char *selectedName = "None";
-  if (state->hierarchyActiveItem >= 0 &&
-      state->hierarchyActiveItem < state->hierarchyNodeCount) {
-
-    if (state->lastSelected != state->hierarchyActiveItem) {
-      strncpy(state->objectNameBuffer,
-              state->hierarchyNodeNames[state->hierarchyActiveItem], 63);
-      state->objectNameBuffer[63] = '\0';
-
-      state->lastSelected = state->hierarchyActiveItem;
-    }
-
-    selectedName = state->hierarchyNodeNames[state->hierarchyActiveItem];
-  }
-
   char labelBuffer[64];
-  sprintf(labelBuffer, "Selected: %s", selectedName);
+  sprintf(labelBuffer, "Selected: %s",
+          state->hierarchyNodeNames[state->hierarchyActiveItem]);
   GuiLabel((Rectangle){startX, startY, width, 20}, labelBuffer);
   startY += 25;
 
@@ -151,32 +154,17 @@ void Gui_DrawInspector(void) {
   GuiLabel((Rectangle){startX, startY, 60, 20}, "Name:");
   Rectangle textBoxBounds = {startX + 50, startY, width - 50, 20};
 
-  // Check if a valid item is selected
-  bool hasValidSelection =
-      (state->hierarchyActiveItem >= 0 &&
-       state->hierarchyActiveItem < state->hierarchyNodeCount);
-
-  // Disable text box if no valid selection
-  if (!hasValidSelection) {
-    GuiDisable();
-  }
-
   if (GuiTextBox(textBoxBounds, state->objectNameBuffer, 64,
                  state->nameEditMode)) {
     state->nameEditMode = !state->nameEditMode;
-    if (!state->nameEditMode && hasValidSelection) {
+    if (!state->nameEditMode) {
       strncpy(state->hierarchyNodeNames[state->hierarchyActiveItem],
               state->objectNameBuffer, 63);
       state->hierarchyNodeNames[state->hierarchyActiveItem][63] = '\0';
     }
   }
 
-  if (!hasValidSelection) {
-    GuiEnable();
-  }
-
-  if (state->nameEditMode && hasValidSelection &&
-      IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+  if (state->nameEditMode && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
     if (!CheckCollisionPointRec(GetMousePosition(), textBoxBounds)) {
       state->nameEditMode = false;
     }
