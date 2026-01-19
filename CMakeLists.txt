@@ -22,7 +22,7 @@ endif()
 add_subdirectory(external/raylib)
 
 file(GLOB_RECURSE SUSTAIN_SOURCES "sustain/src/*.c")
-add_library(sustain SHARED ${SUSTAIN_SOURCES})
+add_library(sustain STATIC ${SUSTAIN_SOURCES})
 
 target_include_directories(sustain PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sustain/include>
@@ -32,7 +32,7 @@ target_include_directories(sustain PUBLIC
 
 target_link_libraries(sustain PUBLIC raylib)
 
-add_executable(sustain_editor 
+add_executable(sustain_editor
     editor/src/main.c
     editor/src/editor_state.c
     editor/src/editor_layout.c
