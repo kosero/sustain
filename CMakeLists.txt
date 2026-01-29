@@ -12,9 +12,14 @@ set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/SDL)
 
+# libyaml
+add_subdirectory(external/libyaml)
+
 # libsustain
 add_library(sustain SHARED
     engine/src/core/window.c
+    engine/src/core/log.c
+    engine/src/util/yaml.c
 )
 
 target_include_directories(sustain
@@ -22,11 +27,13 @@ target_include_directories(sustain
         ${PROJECT_SOURCE_DIR}/engine/include
     PRIVATE
         ${PROJECT_SOURCE_DIR}/external/SDL/include
+        ${PROJECT_SOURCE_DIR}/external/libyaml/include
 )
 
 target_link_libraries(sustain
     PUBLIC
         SDL3::SDL3-shared
+        yaml
 )
 
 # sustain editor

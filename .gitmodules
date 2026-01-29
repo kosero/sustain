@@ -2,3 +2,7 @@
 	path = external/SDL
 	url = https://github.com/libsdl-org/SDL.git
 	branch = release-3.4.x
+[submodule "external/libyaml"]
+	path = external/libyaml
+	url = https://github.com/yaml/libyaml
+	branch = release/0.2.5
