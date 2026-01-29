@@ -1,6 +1,6 @@
 # What is Sustain Engine?
 
-A 2D game engine I wrote using [Raylib](https://www.raylib.com/) for my game projects.
+A 2D game engine I wrote using [SDL](https://www.libsdl.org/) for my game projects.
 I used [LuaJIT](https://luajit.org/) to write the script.
 
 ## Todo
