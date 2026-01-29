@@ -1,26 +1,34 @@
-#include "sustain/core/window.h"
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 #include <SDL3/SDL.h>
+#include <stdio.h>
 
 int main(int argc, char *argv[]) {
-  if (SN_Init_Window(800, 600, "Test", true) != 0) {
-    return 1;
-  }
+    lua_State *L = luaL_newstate();
+    if (!L) return 1;
+    luaL_openlibs(L);
 
-  SDL_Renderer *renderer = SN_Get_Renderer();
-  SDL_Event event;
+    const char *base = SDL_GetBasePath();
 
-  bool running = true;
-  while (running) {
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT) {
-        running = false;
-      }
+    if (base) {
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "path");
+
+        lua_pushfstring(L, "%s;%s?.lua", lua_tostring(L, -1), base);
+        lua_setfield(L, -3, "path");
+        lua_pop(L, 2);
+
+        char script[2048];
+        snprintf(script, sizeof(script), "%seditor.lua", base);
+
+        if (luaL_dofile(L, script)) {
+            fprintf(stderr, "%s\n", lua_tostring(L, -1));
+        }
     }
 
-    SN_Clear_Background();
-    SDL_RenderPresent(renderer);
-  }
+    lua_close(L);
+    SN_Window_Close();
 
-  SN_Window_Close();
-  return 0;
+    return 0;
 }

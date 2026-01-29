@@ -6,3 +6,7 @@
 	path = external/libyaml
 	url = https://github.com/yaml/libyaml
 	branch = release/0.2.5
+[submodule "external/LuaJIT"]
+	path = external/LuaJIT
+	url = https://github.com/LuaJIT/LuaJIT.git
+	branch = v2.1
