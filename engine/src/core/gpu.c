@@ -1,4 +1,5 @@
 #include "sustain/core/gpu.h"
+#include "sustain/core/log.h"
 #include "sustain/core/window.h"
 #include <SDL3/SDL.h>
 
@@ -20,10 +21,10 @@ bool SN_Init_Graphics_Device(void) {
     const char *driver_info = SDL_GetStringProperty(
         props, SDL_PROP_GPU_DEVICE_DRIVER_INFO_STRING, "unknown");
 
-    SDL_Log("[GPU]: %s", gpu_name);
-    SDL_Log("[Driver And Version]: %s %s", driver_name, driver_info);
+    SLOG_INFO("[GPU]: %s", gpu_name);
+    SLOG_INFO("[Driver And Version]: %s %s", driver_name, driver_info);
   } else {
-    SDL_Log("Failed to initialize GPU device.\n");
+    SLOG_ERROR("Failed to initialize GPU device.\n");
     return false;
   }
   return true;
@@ -31,7 +32,7 @@ bool SN_Init_Graphics_Device(void) {
 
 void SN_Destroy_Graphics_Device(void) {
   if (!device) {
-    SDL_Log("SN_Set_GPU_Window: device == NULL");
+    SLOG_WARN("SN_Set_GPU_Window: device == NULL");
     return;
   }
 
@@ -46,26 +47,26 @@ void SN_Destroy_Graphics_Device(void) {
 
 void SN_Set_GPU_Window(SDL_Window *window) {
   if (!device) {
-    SDL_Log("SN_Set_GPU_Window: device == NULL");
+    SLOG_ERROR("SN_Set_GPU_Window: device == NULL");
     return;
   }
   if (!window) {
-    SDL_Log("SN_Set_GPU_Window: window == NULL");
+    SLOG_ERROR("SN_Set_GPU_Window: window == NULL");
     return;
   }
 
   bool ok = SDL_ClaimWindowForGPUDevice(device, window);
   if (ok) {
     const char *driver = SDL_GetGPUDeviceDriver(device);
-    SDL_Log("GPU window claim OK. Backend: %s", driver);
+    SLOG_ERROR("GPU window claim OK. Backend: %s", driver);
   } else {
-    SDL_Log("GPU window claim FAILED: %s", SDL_GetError());
+    SLOG_ERROR("GPU window claim FAILED: %s", SDL_GetError());
   }
 }
 
 SDL_GPUDevice *SN_Get_GPU_Device(void) {
   if (!device) {
-    SDL_Log("SN_Set_GPU_Window: device == NULL");
+    SLOG_ERROR("SN_Set_GPU_Window: device == NULL");
     return NULL;
   }
 

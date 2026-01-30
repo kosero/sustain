@@ -1,4 +1,4 @@
-#include "SDL3/SDL_log.h"
+#include "sustain/core/log.h"
 #include <SDL3/SDL.h>
 
 static SDL_Window *window = NULL;
@@ -9,34 +9,34 @@ int SN_Init_Window(const int width, const int height, const char *title,
 
   if (backend && strcmp(backend, "auto") != 0) {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, backend);
-    SDL_Log("[INIT] Requested renderer backend: %s", backend);
+    SLOG_INFO("[INIT] Requested renderer backend: %s", backend);
   } else {
-    SDL_Log("[INIT] Renderer backend: auto");
+    SLOG_WARN("[INIT] Renderer backend: auto");
   }
 
   if (SDL_Init(SDL_INIT_VIDEO) == false) {
-    SDL_Log("ERROR: Failed to initialize SDL video subsystem: %s",
+    SLOG_ERROR("ERROR: Failed to initialize SDL video subsystem: %s",
             SDL_GetError());
     return 1;
   }
 
   window = SDL_CreateWindow(title, width, height, 0);
   if (window == NULL) {
-    SDL_Log("ERROR: Failed to create window: %s", SDL_GetError());
+    SLOG_ERROR("ERROR: Failed to create window: %s", SDL_GetError());
     SDL_Quit();
     return 1;
   }
 
   renderer = SDL_CreateRenderer(window, NULL);
   if (renderer == NULL) {
-    SDL_Log("ERROR: Failed to create renderer: %s", SDL_GetError());
+    SLOG_ERROR("ERROR: Failed to create renderer: %s", SDL_GetError());
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 1;
   }
   SDL_SetRenderVSync(renderer, vsync);
 
-  SDL_Log("[INFO]: Window initialized | Title=\"%s\" | Size=%dx%d | VSync=%s | "
+  SLOG_INFO("[INFO]: Window initialized | Title=\"%s\" | Size=%dx%d | VSync=%s | "
           "Renderer=\"%s\" | Driver=\"%s\"",
           title, width, height, vsync ? "ON" : "OFF",
           SDL_GetRendererName(renderer), SDL_GetCurrentVideoDriver());
@@ -45,16 +45,16 @@ int SN_Init_Window(const int width, const int height, const char *title,
 }
 
 void SN_Window_Close(void) {
-  SDL_Log("[SHUTDOWN]: Destroying renderer...");
+  SLOG_INFO("[SHUTDOWN]: Destroying renderer...");
   SDL_DestroyRenderer(renderer);
 
-  SDL_Log("[SHUTDOWN]: Destroying window...");
+  SLOG_INFO("[SHUTDOWN]: Destroying window...");
   SDL_DestroyWindow(window);
 
-  SDL_Log("[SHUTDOWN]: Shutting down SDL subsystems...");
+  SLOG_INFO("[SHUTDOWN]: Shutting down SDL subsystems...");
   SDL_Quit();
 
-  SDL_Log("[SHUTDOWN]: Window system shut down successfully.");
+  SLOG_INFO("[SHUTDOWN]: Window system shut down successfully.");
 }
 
 SDL_Window *SN_Get_Window(void) { return window; }
