@@ -1,31 +1,35 @@
-# What is Sustain Engine?
+# Sustain Engine
 
-A 2D game engine I wrote using [SDL](https://www.libsdl.org/) for my game projects.
-I used [LuaJIT](https://luajit.org/) to write the script.
+A 2D game engine I'm building with [SDL3](https://www.libsdl.org/) and C for my personal game projects. I'm using [LuaJIT](https://luajit.org/) for scripting because, well, who wants to recompile everything just to tweak a value?
 
-## Todo
+## What's cooking
 
-Here are some planned features for Sustain Engine:
+Here's what I'm planning to add (when I get around to it):
 
-- [ ] Integrate Box2D for 2D physics
-- [ ] Animated sprite and tilemap support
-- [ ] Particle system
-- [ ] UI system for game menus and HUD
-- [ ] Networking support (planned for later)
+- [ ] Box2D integration for physics (because making my own physics engine sounds like a nightmare)
+- [ ] Animated sprites and tilemap support
+- [ ] Particle system (for all those explosion effects)
+- [ ] UI system for menus and HUD
 - [ ] Sound system
+- [ ] Networking support (maybe... eventually... if I'm feeling ambitious)
 
-## Build
+## Building this thing
 
-- Clone and changed the repository:
+Clone the repo:
 
 ```sh
 git clone https://github.com/kosero/sustain.git
 cd sustain
 ```
 
-- Build the engine:
+Build it:
 
 ```sh
 mkdir build && cd build
-cmake .. && make
+CC=gcc CXX=g++ cmake ..
+make
 ```
+
+---
+
+**Note:** This is a solo project, so don't expect AAA-level polish. I'm just building what I need for my games.
