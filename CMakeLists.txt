@@ -22,6 +22,7 @@ target_link_libraries(cimgui_with_backend PRIVATE SDL3::SDL3-shared)
 add_library(sustain SHARED
     engine/src/core/window.c
     engine/src/core/gpu.c
+    engine/src/core/log.c
     engine/src/renderer/renderer.c
 )
 
