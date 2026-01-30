@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 
 int main(int argc, char *argv[]) {
-  if (SN_Init_Window(800, 600, "Test", true) != 0) {
+  if (SN_Init_Window(800, 600, "Sustain Editor", true) != 0) {
     return 1;
   }
 
