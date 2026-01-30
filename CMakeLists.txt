@@ -15,6 +15,7 @@ add_subdirectory(external/SDL)
 # libsustain
 add_library(sustain SHARED
     engine/src/core/window.c
+    engine/src/renderer/renderer.c
 )
 
 target_include_directories(sustain

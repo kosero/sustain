@@ -39,8 +39,3 @@ void SN_Window_Close(void) {
 
 SDL_Window *SN_Get_Window(void) { return window; }
 SDL_Renderer *SN_Get_Renderer(void) { return renderer; }
-
-void SN_Clear_Background(void) {
-  SDL_SetRenderDrawColor(renderer, 28, 28, 28, 255);
-  SDL_RenderClear(renderer);
-}

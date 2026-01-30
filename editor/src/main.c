@@ -1,4 +1,5 @@
 #include "sustain/core/window.h"
+#include "sustain/renderer/renderer.h"
 #include <SDL3/SDL.h>
 
 int main(int argc, char *argv[]) {
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    SN_Clear_Background();
+    SN_Clear_Background((SN_Color){28, 28, 28});
     SDL_RenderPresent(renderer);
   }
 
