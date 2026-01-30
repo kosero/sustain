@@ -1,10 +1,19 @@
+#include "SDL3/SDL_log.h"
 #include <SDL3/SDL.h>
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 
 int SN_Init_Window(const int width, const int height, const char *title,
-                   bool vsync) {
+                   bool vsync, const char *backend) {
+
+  if (backend && strcmp(backend, "auto") != 0) {
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, backend);
+    SDL_Log("[INIT] Requested renderer backend: %s", backend);
+  } else {
+    SDL_Log("[INIT] Renderer backend: auto");
+  }
+
   if (SDL_Init(SDL_INIT_VIDEO) == false) {
     SDL_Log("ERROR: Failed to initialize SDL video subsystem: %s",
             SDL_GetError());
@@ -27,14 +36,25 @@ int SN_Init_Window(const int width, const int height, const char *title,
   }
   SDL_SetRenderVSync(renderer, vsync);
 
-  SDL_Log("INFO: Window and Renderer initialized correctly.");
+  SDL_Log("[INFO]: Window initialized | Title=\"%s\" | Size=%dx%d | VSync=%s | "
+          "Renderer=\"%s\" | Driver=\"%s\"",
+          title, width, height, vsync ? "ON" : "OFF",
+          SDL_GetRendererName(renderer), SDL_GetCurrentVideoDriver());
+
   return 0;
 }
 
 void SN_Window_Close(void) {
+  SDL_Log("[SHUTDOWN]: Destroying renderer...");
   SDL_DestroyRenderer(renderer);
+
+  SDL_Log("[SHUTDOWN]: Destroying window...");
   SDL_DestroyWindow(window);
+
+  SDL_Log("[SHUTDOWN]: Shutting down SDL subsystems...");
   SDL_Quit();
+
+  SDL_Log("[SHUTDOWN]: Window system shut down successfully.");
 }
 
 SDL_Window *SN_Get_Window(void) { return window; }

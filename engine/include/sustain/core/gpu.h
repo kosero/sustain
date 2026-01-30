@@ -3,7 +3,9 @@
 
 #include <SDL3/SDL.h>
 
-SDL_GPUDevice *SN_Init_Graphics_Device(SDL_Window *window);
-void SN_Destroy_Graphics_Device(SDL_GPUDevice *gpu_device, SDL_Window *window);
+bool SN_Init_Graphics_Device(void);
+void SN_Destroy_Graphics_Device(void);
+void SN_Set_GPU_Window(SDL_Window *window);
+SDL_GPUDevice *SN_Get_GPU_Device(void);
 
 #endif

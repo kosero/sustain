@@ -4,7 +4,7 @@
 #include <SDL3/SDL.h>
 
 int SN_Init_Window(const int width, const int height, const char *title,
-                   bool vsync);
+                   bool vsync, const char *backend);
 void SN_Window_Close(void);
 
 SDL_Renderer *SN_Get_Renderer();

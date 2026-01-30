@@ -6,14 +6,14 @@
 #include "sustain/core/window.h"
 
 int main(int argc, char *argv[]) {
-  if (SN_Init_Window(800, 600, "Sustain Editor", true) != 0) {
+  if (SN_Init_Window(800, 600, "Sustain Editor", true, "auto") != 0) {
     return 1;
   }
 
   SDL_Window *window = SN_Get_Window();
 
-  SDL_GPUDevice *gpu_device = SN_Init_Graphics_Device(window);
-  SN_Gui_Init(window, gpu_device);
+  SN_Init_Graphics_Device();
+  SN_Gui_Init(window, SN_Get_GPU_Device());
 
   SDL_Event event;
   bool running = true;
@@ -31,11 +31,11 @@ int main(int argc, char *argv[]) {
     igBegin("SustainEditor", NULL, 0);
     igText("FPS: %.1f", io->Framerate);
     igEnd();
-    SN_Gui_Render(window, gpu_device);
+    SN_Gui_Render(window, SN_Get_GPU_Device());
   }
 
   SN_Quit_Gui();
-  SN_Destroy_Graphics_Device(gpu_device, window);
+  SN_Destroy_Graphics_Device();
   SN_Window_Close();
   return 0;
 }
