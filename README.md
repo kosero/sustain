@@ -1,3 +1,5 @@
+# ⚠️ This project is currently under active development
+
 # Sustain Engine
 
 A 2D game engine I'm building with [SDL3](https://www.libsdl.org/) and C for my personal game projects. I'm using [LuaJIT](https://luajit.org/) for scripting because, well, who wants to recompile everything just to tweak a value?
