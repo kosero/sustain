@@ -1,6 +1,6 @@
-#include <stdio.h>
+#include "core.h"
 
 int main(void) {
-  printf("hai :3");
+  core_run();
   return 0;
 }
