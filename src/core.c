@@ -1,14 +1,11 @@
 #include "core.h"
 #include "config.h"
-#include "gui/editor_viewport.h"
 #include "raylib.h"
 #include "renderer.h"
 #include <assert.h>
 
-#define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
-
-#include "dark/style_dark.h"
+#define RAYLIB_NUKLEAR_IMPLEMENTATION
+#include "raylib-nuklear.h"
 
 static CoreContext **get_core_context_ptr_internal(void) {
   static CoreContext *g_ctx = NULL;
@@ -35,7 +32,6 @@ static void core_init_window(CoreContext *ctx) {
   InitWindow(window->width, window->height, window->title);
 
   renderer_context_init(ctx);
-  GuiLoadStyleDark();
 }
 
 static void core_close_window(CoreContext *ctx) {
@@ -54,13 +50,13 @@ static void core_loop_update(CoreContext *ctx) {
   }
 }
 
-static void core_loop_render(CoreContext *ctx) { editor_viewport_panel(ctx); }
+static void core_loop_render(CoreContext *ctx) {}
 
 static void core_loop(CoreContext *ctx) {
   while (!WindowShouldClose()) {
     core_loop_update(ctx);
     BeginDrawing();
-    ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+    ClearBackground(BLACK);
     core_loop_render(ctx);
     EndDrawing();
   }

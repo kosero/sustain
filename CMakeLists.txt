@@ -9,12 +9,14 @@ set(USE_WAYLAND          OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND   OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/raylib)
 
+set(RAYLIB_NUKLEAR_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(vendor/raylib-nuklear)
+
 set(SOURCES
     src/main.c
     src/core.c
     src/config.c
     src/renderer.c
-    src/gui/editor_viewport.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -24,13 +26,13 @@ target_include_directories(${PROJECT_NAME}
         ${PROJECT_SOURCE_DIR}/inc
         ${PROJECT_SOURCE_DIR}/vendor/cbase
         ${PROJECT_SOURCE_DIR}/vendor/raylib/src
-        ${PROJECT_SOURCE_DIR}/vendor/raygui/src
-        ${PROJECT_SOURCE_DIR}/vendor/raygui/styles
+        ${PROJECT_SOURCE_DIR}/vendor/raylib-nuklear/include
 )
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         raylib
+        raylib_nuklear
 )
 
 if(NOT WIN32)
