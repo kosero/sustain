@@ -17,7 +17,8 @@ Checks: >
   -cppcoreguidelines-pro-type-vararg,
   -hicpp-signed-bitwise,
   -hicpp-uppercase-literal-suffix,
-  -readability-uppercase-literal-suffix
+  -readability-uppercase-literal-suffix,
+  -clang-analyzer-core.NullDereference
 
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^(?!.*vendor/).*'

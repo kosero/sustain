@@ -1,10 +1,10 @@
 #ifndef SUSTAIN_CORE_H
 #define SUSTAIN_CORE_H
 
-#include "renderer.h"
+#include "raylib-nuklear.h"
 
 typedef struct CoreContext {
-  RendererContext renderer;
+  struct nk_context *nk_ctx;
 } CoreContext;
 
 CoreContext *get_core_context(void);

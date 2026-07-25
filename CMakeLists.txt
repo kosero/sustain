@@ -16,7 +16,6 @@ set(SOURCES
     src/main.c
     src/core.c
     src/config.c
-    src/renderer.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
