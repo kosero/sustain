@@ -2,9 +2,11 @@
 #define SUSTAIN_CORE_H
 
 #include "raylib-nuklear.h"
+#include "renderer.h"
 
 typedef struct CoreContext {
   struct nk_context *nk_ctx;
+  RendererContext renderer;
 } CoreContext;
 
 CoreContext *get_core_context(void);

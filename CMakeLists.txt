@@ -16,6 +16,11 @@ set(SOURCES
     src/main.c
     src/core.c
     src/config.c
+    src/renderer.c
+    src/gui/gui.c
+    src/gui/panel_hierarchy.c
+    src/gui/panel_viewport.c
+    src/gui/panel_properties.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
