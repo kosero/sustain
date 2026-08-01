@@ -3,12 +3,14 @@
 
 #include "raylib-nuklear.h"
 #include "renderer.h"
+#include "editor_camera.h"
 #include <flecs.h>
 
 typedef struct CoreContext {
   struct nk_context *nk_ctx;
   RendererContext renderer;
   ecs_world_t *world;
+  EditorCamera editor_camera;
 } CoreContext;
 
 CoreContext *get_core_context(void);

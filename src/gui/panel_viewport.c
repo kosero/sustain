@@ -11,8 +11,11 @@ void gui_panel_viewport(CoreContext *ctx, float viewport_w) {
     int vp_h = (int)vp_content.h;
 
     if (vp_w > 0 && vp_h > 0) {
+      bool is_hovered = nk_window_is_hovered(ctx->nk_ctx);
+      editor_camera_update(&ctx->editor_camera, is_hovered);
+
       renderer_viewport_resize(&ctx->renderer, vp_w, vp_h);
-      renderer_draw_viewport(&ctx->renderer, ctx->world);
+      renderer_draw_viewport(&ctx->renderer, &ctx->editor_camera.camera, ctx->world);
 
       nk_layout_row_static(ctx->nk_ctx, (float)vp_h, vp_w, 1);
       struct nk_rect bounds = nk_widget_bounds(ctx->nk_ctx);

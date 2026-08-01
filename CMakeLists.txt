@@ -24,6 +24,7 @@ set(SOURCES
     src/core.c
     src/config.c
     src/renderer.c
+    src/editor_camera.c
     src/components.c
     src/gui/gui.c
     src/gui/panel_hierarchy.c

@@ -29,6 +29,7 @@ void core_context_init(void) {
   components_register(ctx->world);
 
   renderer_context_init(ctx);
+  editor_camera_init(&ctx->editor_camera);
 }
 
 static void core_init_window(void) {

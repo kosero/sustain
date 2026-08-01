@@ -7,12 +7,6 @@
 void renderer_context_init(struct CoreContext *ctx) {
   RendererContext *rctx = &ctx->renderer;
 
-  rctx->camera.position = (Vector3){10.0f, 10.0f, 10.0f};
-  rctx->camera.target = (Vector3){0.0f, 0.0f, 0.0f};
-  rctx->camera.up = (Vector3){0.0f, 1.0f, 0.0f};
-  rctx->camera.fovy = 60.0f;
-  rctx->camera.projection = CAMERA_PERSPECTIVE;
-
   int initial_w = 640;
   int initial_h = 480;
   rctx->viewport_rt = LoadRenderTexture(initial_w, initial_h);
@@ -50,11 +44,11 @@ void renderer_viewport_resize(RendererContext *rctx, int width, int height) {
   rctx->viewport_initialized = true;
 }
 
-void renderer_draw_viewport(RendererContext *rctx, ecs_world_t *world) {
+void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera, ecs_world_t *world) {
   BeginTextureMode(rctx->viewport_rt);
   ClearBackground((Color){30, 30, 35, 255});
 
-  BeginMode3D(rctx->camera);
+  BeginMode3D(*camera);
 
   DrawGrid(20, 1.0f);
 
