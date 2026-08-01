@@ -58,12 +58,22 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera, ecs_world_t
     MeshRenderer *m = ecs_field(&it, MeshRenderer, 1);
 
     for (int i = 0; i < it.count; i++) {
+      rlPushMatrix();
+      rlTranslatef(t[i].position.x, t[i].position.y, t[i].position.z);
+      
+      // euler rotation
+      rlRotatef(t[i].rotation.y, 0.0f, 1.0f, 0.0f);
+      rlRotatef(t[i].rotation.x, 1.0f, 0.0f, 0.0f);
+      rlRotatef(t[i].rotation.z, 0.0f, 0.0f, 1.0f);
+
       if (m[i].type == PRIMITIVE_CUBE) {
-        DrawCube(t[i].position, t[i].scale.x, t[i].scale.y, t[i].scale.z, m[i].color);
-        DrawCubeWires(t[i].position, t[i].scale.x, t[i].scale.y, t[i].scale.z, BLACK);
+        DrawCube((Vector3){0, 0, 0}, t[i].scale.x, t[i].scale.y, t[i].scale.z, m[i].color);
+        DrawCubeWires((Vector3){0, 0, 0}, t[i].scale.x, t[i].scale.y, t[i].scale.z, BLACK);
       } else if (m[i].type == PRIMITIVE_SPHERE) {
-        DrawSphere(t[i].position, t[i].scale.x, m[i].color);
+        DrawSphere((Vector3){0, 0, 0}, t[i].scale.x, m[i].color);
       }
+      
+      rlPopMatrix();
     }
   }
 

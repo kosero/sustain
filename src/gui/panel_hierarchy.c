@@ -37,7 +37,7 @@ static void draw_entity_node(CoreContext *ctx, ecs_entity_t e) {
 void gui_panel_hierarchy(CoreContext *ctx) {
   if (nk_group_begin(ctx->nk_ctx, "Hierarchy",
                      NK_WINDOW_BORDER | NK_WINDOW_TITLE)) {
-    nk_layout_row_dynamic(ctx->nk_ctx, 0, 1);
+    nk_layout_row_dynamic(ctx->nk_ctx, 1, 1);
 
     if (nk_tree_push(ctx->nk_ctx, NK_TREE_TAB, "RootScene", NK_MAXIMIZED)) {
       ecs_iter_t it = ecs_query_iter(ctx->world, ctx->hierarchy_query);
