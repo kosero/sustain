@@ -32,7 +32,7 @@ void core_context_init(void) {
   ctx->hierarchy_query = ecs_query(ctx->world, {
       .terms = {
           { ecs_id(GameObject) },
-          { EcsChildOf, EcsWildcard, .oper = EcsNot }
+          { .id = ecs_pair(EcsChildOf, EcsWildcard), .oper = EcsNot }
       }
   });
 
