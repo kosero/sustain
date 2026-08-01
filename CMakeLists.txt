@@ -37,7 +37,6 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/inc
-        ${PROJECT_SOURCE_DIR}/vendor/cbase
         ${PROJECT_SOURCE_DIR}/vendor/raylib/src
         ${PROJECT_SOURCE_DIR}/vendor/raylib-nuklear/include
 )

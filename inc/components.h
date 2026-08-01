@@ -19,6 +19,7 @@ typedef struct {
 
 extern ECS_COMPONENT_DECLARE(Transform3D);
 extern ECS_COMPONENT_DECLARE(MeshRenderer);
+extern ECS_TAG_DECLARE(GameObject);
 
 void components_register(ecs_world_t *world);
 

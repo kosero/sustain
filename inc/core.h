@@ -10,6 +10,8 @@ typedef struct CoreContext {
   struct nk_context *nk_ctx;
   RendererContext renderer;
   ecs_world_t *world;
+  ecs_query_t *hierarchy_query;
+  ecs_entity_t selected_entity;
   EditorCamera editor_camera;
 } CoreContext;
 

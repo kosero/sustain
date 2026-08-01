@@ -28,6 +28,11 @@ void core_context_init(void) {
   ctx->world = ecs_init();
   components_register(ctx->world);
 
+  ctx->selected_entity = 0;
+  ctx->hierarchy_query = ecs_query(ctx->world, {
+      .terms = { {ecs_id(GameObject)} }
+  });
+
   renderer_context_init(ctx);
   editor_camera_init(&ctx->editor_camera);
 }
@@ -42,6 +47,9 @@ static void core_init_window(void) {
 }
 
 static void core_close_window(CoreContext *ctx) {
+  if (ctx->hierarchy_query) {
+    ecs_query_fini(ctx->hierarchy_query);
+  }
   renderer_context_cleanup(&ctx->renderer);
   ecs_fini(ctx->world);
   UnloadNuklear(ctx->nk_ctx);
@@ -51,6 +59,8 @@ static void core_close_window(CoreContext *ctx) {
 static void core_load_content(CoreContext *ctx) {
   // blue cube
   ecs_entity_t cube = ecs_new(ctx->world);
+  ecs_set_name(ctx->world, cube, "Blue Cube");
+  ecs_add(ctx->world, cube, GameObject);
   ecs_set(ctx->world, cube, Transform3D, {
       .position = {0.0f, 1.0f, 0.0f},
       .rotation = {0.0f, 0.0f, 0.0f},
@@ -63,6 +73,8 @@ static void core_load_content(CoreContext *ctx) {
 
   // red sphere
   ecs_entity_t sphere = ecs_new(ctx->world);
+  ecs_set_name(ctx->world, sphere, "Red Sphere");
+  ecs_add(ctx->world, sphere, GameObject);
   ecs_set(ctx->world, sphere, Transform3D, {
       .position = {4.0f, 1.0f, 0.0f},
       .rotation = {0.0f, 0.0f, 0.0f},
