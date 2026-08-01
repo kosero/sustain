@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 typedef struct {
-  Camera3D camera;
-  bool is_moving;
+	Camera3D camera;
+	bool is_moving;
 } EditorCamera;
 
 void editor_camera_init(EditorCamera *cam);

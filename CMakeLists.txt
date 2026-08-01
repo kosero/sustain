@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(sustain LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BUILD_SHARED_LIBS OFF)
 
@@ -57,3 +59,6 @@ find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     C_CLANG_TIDY "${CLANG_TIDY_EXE};-p;${CMAKE_BINARY_DIR}"
 )
+
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-missing-field-initializers -Wno-c23-extensions)
+target_compile_definitions(${PROJECT_NAME} PRIVATE _POSIX_C_SOURCE=200809L)

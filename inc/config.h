@@ -2,10 +2,10 @@
 #define SUSTAIN_CONFIG_H
 
 typedef struct {
-  int width;
-  int height;
-  unsigned int flags;
-  char *title;
+	int width;
+	int height;
+	unsigned int flags;
+	char *title;
 } WindowProperty;
 
 WindowProperty *get_window_property(void);

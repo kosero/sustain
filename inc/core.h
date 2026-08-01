@@ -1,18 +1,18 @@
 #ifndef SUSTAIN_CORE_H
 #define SUSTAIN_CORE_H
 
+#include "editor_camera.h"
 #include "raylib-nuklear.h"
 #include "renderer.h"
-#include "editor_camera.h"
 #include <flecs.h>
 
 typedef struct CoreContext {
-  struct nk_context *nk_ctx;
-  RendererContext renderer;
-  ecs_world_t *world;
-  ecs_query_t *hierarchy_query;
-  ecs_entity_t selected_entity;
-  EditorCamera editor_camera;
+	struct nk_context *nk_ctx;
+	ecs_world_t *world;
+	ecs_query_t *hierarchy_query;
+	ecs_entity_t selected_entity;
+	RendererContext renderer;
+	EditorCamera editor_camera;
 } CoreContext;
 
 CoreContext *get_core_context(void);

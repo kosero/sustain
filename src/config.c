@@ -2,29 +2,33 @@
 #include "raylib.h"
 #include <stdlib.h>
 
-static WindowProperty **get_window_property_ptr_internal(void) {
-  static WindowProperty *window = NULL;
-  return &window;
+static WindowProperty **get_window_property_ptr_internal(void)
+{
+	static WindowProperty *window = NULL;
+	return &window;
 }
 
-WindowProperty *get_window_property(void) {
-  WindowProperty **window_ptr = get_window_property_ptr_internal();
-  if (*window_ptr == NULL) {
-    static WindowProperty default_window = {0};
-    *window_ptr = &default_window;
-  }
-  return *window_ptr;
+WindowProperty *get_window_property(void)
+{
+	WindowProperty **window_ptr = get_window_property_ptr_internal();
+	if (*window_ptr == NULL) {
+		static WindowProperty default_window = {0};
+		*window_ptr = &default_window;
+	}
+	return *window_ptr;
 }
 
-void set_window_property(WindowProperty *window) {
-  *get_window_property_ptr_internal() = window;
+void set_window_property(WindowProperty *window)
+{
+	*get_window_property_ptr_internal() = window;
 }
 
-void window_property_init(void) {
-  WindowProperty *window = get_window_property();
+void window_property_init(void)
+{
+	WindowProperty *window = get_window_property();
 
-  window->title = "Sustain";
-  window->width = 800;
-  window->height = 600;
-  window->flags = FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT;
+	window->title = "Sustain";
+	window->width = 800;
+	window->height = 600;
+	window->flags = FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT;
 }
