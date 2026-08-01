@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "components.h"
 #include "core.h"
 #include "raylib.h"
 #include "rlgl.h"
@@ -18,6 +19,13 @@ void renderer_context_init(struct CoreContext *ctx) {
   rctx->viewport_width = initial_w;
   rctx->viewport_height = initial_h;
   rctx->viewport_initialized = true;
+
+  rctx->render_query = ecs_query(ctx->world, {
+      .terms = {
+          {ecs_id(Transform3D)},
+          {ecs_id(MeshRenderer)}
+      }
+  });
 }
 
 void renderer_viewport_resize(RendererContext *rctx, int width, int height) {
@@ -42,7 +50,7 @@ void renderer_viewport_resize(RendererContext *rctx, int width, int height) {
   rctx->viewport_initialized = true;
 }
 
-void renderer_draw_viewport(RendererContext *rctx) {
+void renderer_draw_viewport(RendererContext *rctx, ecs_world_t *world) {
   BeginTextureMode(rctx->viewport_rt);
   ClearBackground((Color){30, 30, 35, 255});
 
@@ -50,22 +58,30 @@ void renderer_draw_viewport(RendererContext *rctx) {
 
   DrawGrid(20, 1.0f);
 
-  DrawCube((Vector3){0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f,
-           (Color){80, 140, 220, 255});
-  DrawCubeWires((Vector3){0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f,
-                (Color){50, 100, 180, 255});
+  ecs_iter_t it = ecs_query_iter(world, rctx->render_query);
+  while (ecs_query_next(&it)) {
+    Transform3D *t = ecs_field(&it, Transform3D, 0);
+    MeshRenderer *m = ecs_field(&it, MeshRenderer, 1);
 
-  DrawSphere((Vector3){4.0f, 1.0f, 0.0f}, 1.0f, (Color){220, 80, 80, 255});
-
-  DrawLine3D((Vector3){0}, (Vector3){3, 0, 0}, RED);
-  DrawLine3D((Vector3){0}, (Vector3){0, 3, 0}, GREEN);
-  DrawLine3D((Vector3){0}, (Vector3){0, 0, 3}, BLUE);
+    for (int i = 0; i < it.count; i++) {
+      if (m[i].type == PRIMITIVE_CUBE) {
+        DrawCube(t[i].position, t[i].scale.x, t[i].scale.y, t[i].scale.z, m[i].color);
+        DrawCubeWires(t[i].position, t[i].scale.x, t[i].scale.y, t[i].scale.z, BLACK);
+      } else if (m[i].type == PRIMITIVE_SPHERE) {
+        DrawSphere(t[i].position, t[i].scale.x, m[i].color);
+      }
+    }
+  }
 
   EndMode3D();
   EndTextureMode();
 }
 
 void renderer_context_cleanup(RendererContext *rctx) {
+  if (rctx->render_query) {
+    ecs_query_fini(rctx->render_query);
+  }
+
   if (rctx->viewport_initialized) {
     UnloadRenderTexture(rctx->viewport_rt);
     rctx->viewport_initialized = false;

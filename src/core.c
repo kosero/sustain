@@ -1,5 +1,6 @@
 #define RAYLIB_NUKLEAR_IMPLEMENTATION
 #include "core.h"
+#include "components.h"
 #include "config.h"
 #include "gui/gui.h"
 #include "raylib.h"
@@ -24,6 +25,9 @@ void core_context_init(void) {
   struct nk_context *nk_ctx = InitNuklear(font_size);
   ctx->nk_ctx = nk_ctx;
 
+  ctx->world = ecs_init();
+  components_register(ctx->world);
+
   renderer_context_init(ctx);
 }
 
@@ -38,19 +42,45 @@ static void core_init_window(void) {
 
 static void core_close_window(CoreContext *ctx) {
   renderer_context_cleanup(&ctx->renderer);
+  ecs_fini(ctx->world);
   UnloadNuklear(ctx->nk_ctx);
   CloseWindow();
 }
 
-static void core_load_content(CoreContext *ctx) { (void)ctx; }
+static void core_load_content(CoreContext *ctx) {
+  // blue cube
+  ecs_entity_t cube = ecs_new(ctx->world);
+  ecs_set(ctx->world, cube, Transform3D, {
+      .position = {0.0f, 1.0f, 0.0f},
+      .rotation = {0.0f, 0.0f, 0.0f},
+      .scale = {2.0f, 2.0f, 2.0f}
+  });
+  ecs_set(ctx->world, cube, MeshRenderer, {
+      .type = PRIMITIVE_CUBE,
+      .color = (Color){80, 140, 220, 255}
+  });
+
+  // red sphere
+  ecs_entity_t sphere = ecs_new(ctx->world);
+  ecs_set(ctx->world, sphere, Transform3D, {
+      .position = {4.0f, 1.0f, 0.0f},
+      .rotation = {0.0f, 0.0f, 0.0f},
+      .scale = {1.0f, 1.0f, 1.0f}
+  });
+  ecs_set(ctx->world, sphere, MeshRenderer, {
+      .type = PRIMITIVE_SPHERE,
+      .color = (Color){220, 80, 80, 255}
+  });
+}
 
 static void core_loop_update(CoreContext *ctx) {
-  (void)ctx;
   if (IsWindowResized()) {
     WindowProperty *w = get_window_property();
     w->width = GetScreenWidth();
     w->height = GetScreenHeight();
   }
+
+  ecs_progress(ctx->world, GetFrameTime());
 }
 
 static void core_loop_render_ui(CoreContext *ctx) { gui_render_ui(ctx); }

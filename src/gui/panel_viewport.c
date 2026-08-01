@@ -12,7 +12,7 @@ void gui_panel_viewport(CoreContext *ctx, float viewport_w) {
 
     if (vp_w > 0 && vp_h > 0) {
       renderer_viewport_resize(&ctx->renderer, vp_w, vp_h);
-      renderer_draw_viewport(&ctx->renderer);
+      renderer_draw_viewport(&ctx->renderer, ctx->world);
 
       nk_layout_row_static(ctx->nk_ctx, (float)vp_h, vp_w, 1);
       struct nk_rect bounds = nk_widget_bounds(ctx->nk_ctx);

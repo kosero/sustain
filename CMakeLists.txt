@@ -5,18 +5,26 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BUILD_SHARED_LIBS OFF)
 
+# raylib
 set(USE_WAYLAND          OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND   OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/raylib)
 
+# raylib nuklear
 set(RAYLIB_NUKLEAR_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/raylib-nuklear)
+
+# flecs
+set(FLECS_SHARED OFF CACHE BOOL "" FORCE)
+set(FLECS_STATIC ON CACHE BOOL "" FORCE)
+add_subdirectory(vendor/flecs)
 
 set(SOURCES
     src/main.c
     src/core.c
     src/config.c
     src/renderer.c
+    src/components.c
     src/gui/gui.c
     src/gui/panel_hierarchy.c
     src/gui/panel_viewport.c
@@ -37,6 +45,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         raylib
         raylib_nuklear
+        flecs_static
 )
 
 if(NOT WIN32)

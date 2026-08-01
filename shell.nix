@@ -5,6 +5,7 @@ pkgs.mkShell {
     cmake
     gnumake
     clang
+    gdb
 
     clang-tools
     pkg-config
