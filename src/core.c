@@ -1,4 +1,3 @@
-#define RAYLIB_NUKLEAR_IMPLEMENTATION
 #include "core.h"
 #include "components.h"
 #include "config.h"

@@ -1,5 +1,4 @@
 #include "editor_camera.h"
-#include "raymath.h"
 #include "rcamera.h"
 
 void editor_camera_init(EditorCamera *cam)

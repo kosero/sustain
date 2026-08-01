@@ -28,6 +28,7 @@ set(SOURCES
     src/renderer.c
     src/editor_camera.c
     src/components.c
+    src/gui/nuklear_impl.c
     src/gui/gui.c
     src/gui/panel_hierarchy.c
     src/gui/panel_viewport.c
