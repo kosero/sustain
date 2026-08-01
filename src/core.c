@@ -30,7 +30,10 @@ void core_context_init(void) {
 
   ctx->selected_entity = 0;
   ctx->hierarchy_query = ecs_query(ctx->world, {
-      .terms = { {ecs_id(GameObject)} }
+      .terms = {
+          { ecs_id(GameObject) },
+          { EcsChildOf, EcsWildcard, .oper = EcsNot }
+      }
   });
 
   renderer_context_init(ctx);
@@ -83,6 +86,21 @@ static void core_load_content(CoreContext *ctx) {
   ecs_set(ctx->world, sphere, MeshRenderer, {
       .type = PRIMITIVE_SPHERE,
       .color = (Color){220, 80, 80, 255}
+  });
+
+  // child cube
+  ecs_entity_t child_cube = ecs_new(ctx->world);
+  ecs_set_name(ctx->world, child_cube, "Child Cube");
+  ecs_add(ctx->world, child_cube, GameObject);
+  ecs_add_pair(ctx->world, child_cube, EcsChildOf, cube);
+  ecs_set(ctx->world, child_cube, Transform3D, {
+      .position = {0.0f, 2.0f, 0.0f},
+      .rotation = {0.0f, 0.0f, 0.0f},
+      .scale = {0.5f, 0.5f, 0.5f}
+  });
+  ecs_set(ctx->world, child_cube, MeshRenderer, {
+      .type = PRIMITIVE_CUBE,
+      .color = (Color){80, 220, 140, 255}
   });
 }
 
