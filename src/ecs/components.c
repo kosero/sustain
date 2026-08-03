@@ -1,4 +1,4 @@
-#include "components.h"
+#include "ecs/components.h"
 
 // NOLINTBEGIN
 ECS_COMPONENT_DECLARE(Transform3D);

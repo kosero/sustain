@@ -1,6 +1,6 @@
-#include "renderer.h"
-#include "components.h"
-#include "core.h"
+#include "renderer/renderer.h"
+#include "core/core.h"
+#include "ecs/components.h"
 #include "raylib.h"
 #include "rlgl.h"
 #include <assert.h>

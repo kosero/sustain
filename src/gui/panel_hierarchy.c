@@ -1,5 +1,5 @@
 #include "gui/panel_hierarchy.h"
-#include "components.h"
+#include "ecs/components.h"
 #include "flecs.h"
 #include "raylib-nuklear.h"
 

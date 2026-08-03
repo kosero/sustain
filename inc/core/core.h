@@ -1,9 +1,9 @@
 #ifndef SUSTAIN_CORE_H
 #define SUSTAIN_CORE_H
 
-#include "editor_camera.h"
+#include "renderer/editor_camera.h"
 #include "raylib-nuklear.h"
-#include "renderer.h"
+#include "renderer/renderer.h"
 #include <flecs.h>
 
 typedef struct CoreContext {

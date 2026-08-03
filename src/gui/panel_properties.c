@@ -1,5 +1,5 @@
 #include "gui/panel_properties.h"
-#include "components.h"
+#include "ecs/components.h"
 #include "raylib-nuklear.h"
 
 static void draw_vec3_property(struct nk_context *nk, const char *label,

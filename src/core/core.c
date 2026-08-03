@@ -1,10 +1,10 @@
-#include "core.h"
-#include "components.h"
-#include "config.h"
+#include "core/core.h"
+#include "core/config.h"
+#include "core/log.h"
+#include "ecs/components.h"
 #include "gui/gui.h"
-#include "log.h"
 #include "raylib.h"
-#include "renderer.h"
+#include "renderer/renderer.h"
 #include <assert.h>
 
 static CoreContext **get_core_context_ptr_internal(void)

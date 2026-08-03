@@ -1,4 +1,4 @@
-#include "config.h"
+#include "core/config.h"
 #include "raylib.h"
 #include <stdlib.h>
 

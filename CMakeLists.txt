@@ -23,12 +23,12 @@ add_subdirectory(vendor/flecs)
 
 set(SOURCES
     src/main.c
-    src/core.c
-    src/config.c
-    src/log.c
-    src/renderer.c
-    src/editor_camera.c
-    src/components.c
+    src/core/core.c
+    src/core/config.c
+    src/core/log.c
+    src/renderer/renderer.c
+    src/renderer/editor_camera.c
+    src/ecs/components.c
     src/gui/nuklear_impl.c
     src/gui/gui.c
     src/gui/panel_hierarchy.c

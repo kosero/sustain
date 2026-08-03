@@ -1,4 +1,4 @@
-#include "editor_camera.h"
+#include "renderer/editor_camera.h"
 #include "rcamera.h"
 
 void editor_camera_init(EditorCamera *cam)

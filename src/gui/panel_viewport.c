@@ -1,6 +1,6 @@
 #include "gui/panel_viewport.h"
 #include "raylib-nuklear.h"
-#include "renderer.h"
+#include "renderer/renderer.h"
 
 void gui_panel_viewport(CoreContext *ctx, float viewport_w)
 {
