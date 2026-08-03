@@ -25,6 +25,7 @@ set(SOURCES
     src/main.c
     src/core.c
     src/config.c
+    src/log.c
     src/renderer.c
     src/editor_camera.c
     src/components.c

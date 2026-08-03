@@ -2,6 +2,7 @@
 #include "components.h"
 #include "config.h"
 #include "gui/gui.h"
+#include "log.h"
 #include "raylib.h"
 #include "renderer.h"
 #include <assert.h>
@@ -48,6 +49,7 @@ static void core_init_window(void)
 	WindowProperty *window = get_window_property();
 	SetConfigFlags(window->flags);
 	InitWindow(window->width, window->height, window->title);
+  log_printf(LOG_LEVEL_INFO, "window initialized");
 }
 
 static void core_close_window(CoreContext *ctx)
@@ -59,6 +61,7 @@ static void core_close_window(CoreContext *ctx)
 	ecs_fini(ctx->world);
 	UnloadNuklear(ctx->nk_ctx);
 	CloseWindow();
+  log_printf(LOG_LEVEL_INFO, "window closed");
 }
 
 static void core_load_content(CoreContext *ctx)
