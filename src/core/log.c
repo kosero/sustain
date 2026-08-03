@@ -2,9 +2,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-void log_printf(LOG_LEVEL level, const char *fmt, ...) {
+void log_printf(LOG_LEVEL level, const char *format, ...)  {
   va_list args;
-  va_start(args, fmt);
+  va_start(args, format);
 
   switch (level) {
     case LOG_LEVEL_INFO: printf("[INFO]: "); break;
@@ -12,7 +12,7 @@ void log_printf(LOG_LEVEL level, const char *fmt, ...) {
     case LOG_LEVEL_ERROR: printf("[ERROR]: "); break;
   }
 
-  vprintf(fmt, args);
+  vprintf(format, args);
   va_end(args);
   printf("\n");
 }

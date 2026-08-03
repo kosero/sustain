@@ -41,6 +41,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/inc
+    SYSTEM PRIVATE
         ${PROJECT_SOURCE_DIR}/vendor/raylib/src
         ${PROJECT_SOURCE_DIR}/vendor/raylib-nuklear/include
 )
@@ -62,5 +63,25 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     C_CLANG_TIDY "${CLANG_TIDY_EXE};-p;${CMAKE_BINARY_DIR}"
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-missing-field-initializers -Wno-c23-extensions)
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE 
+        /W4 
+        /WX 
+        /wd5287
+        /wd4116
+        /wd4244
+        /wd4701
+    )
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE 
+        -Wall 
+        -Wextra 
+        -Wpedantic 
+        -Werror 
+        -Wno-missing-field-initializers 
+        -Wno-c23-extensions
+    )
+endif()
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE _POSIX_C_SOURCE=200809L)
+

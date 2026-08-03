@@ -1,0 +1,69 @@
+name: Build sustain
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "Windows MSVC Release"
+            os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+            build_type: Release
+            artifact_name: sustain-windows.exe
+            artifact_path: build/Release/sustain.exe
+          - name: "Ubuntu Clang Release"
+            os: ubuntu-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+            build_type: Release
+            artifact_name: sustain-linux-clang
+            artifact_path: build/sustain
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential       \
+            libgl1-mesa-dev       \
+            libglu1-mesa-dev      \
+            libx11-dev            \
+            libxrandr-dev         \
+            libxinerama-dev       \
+            libxcursor-dev        \
+            libxi-dev             \
+            libxext-dev           \
+            libasound2-dev
+      - name: Setup MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure CMake
+        run: >
+          cmake -B build
+          -DCMAKE_C_COMPILER=${{ matrix.config.c_compiler }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.config.cpp_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+          -DBUILD_SHARED_LIBS=OFF
+          -DUSE_WAYLAND=OFF
+          -DGLFW_BUILD_WAYLAND=OFF
+          -S .
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config.build_type }} --parallel
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.artifact_name }}
+          path: ${{ matrix.config.artifact_path }}
+          if-no-files-found: error
