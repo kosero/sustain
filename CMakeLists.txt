@@ -3,7 +3,7 @@ project(sustain LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BUILD_SHARED_LIBS OFF)
 
@@ -84,8 +84,10 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/inc
         ${SHADER_OUT_DIR}
+)
+
+target_include_directories(${PROJECT_NAME}
     SYSTEM PRIVATE
-        ${PROJECT_SOURCE_DIR}/vendor/sdl3/include
         ${PROJECT_SOURCE_DIR}/vendor/cglm/include
         ${PROJECT_SOURCE_DIR}/vendor/Nuklear
 )
