@@ -1,13 +1,14 @@
 #ifndef SUSTAIN_COMPONENTS_H
 #define SUSTAIN_COMPONENTS_H
 
-#include "raylib.h"
+#include "math/math.h"
+#include <cglm/struct.h>
 #include <flecs.h>
 
 typedef struct {
-	Vector3 position;
-	Vector3 rotation;
-	Vector3 scale;
+	vec3s position;
+	vec3s rotation;
+	vec3s scale;
 } Transform3D;
 
 typedef enum { PRIMITIVE_CUBE, PRIMITIVE_SPHERE } PrimitiveType;

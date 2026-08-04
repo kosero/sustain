@@ -1,10 +1,12 @@
 #ifndef SUSTAIN_CORE_H
 #define SUSTAIN_CORE_H
 
+#include "math/camera.h"
 #include "renderer/editor_camera.h"
-#include "raylib-nuklear.h"
 #include "renderer/renderer.h"
 #include <flecs.h>
+struct nk_context;
+struct SDL_Window;
 
 typedef struct CoreContext {
 	struct nk_context *nk_ctx;
@@ -17,8 +19,11 @@ typedef struct CoreContext {
 
 CoreContext *get_core_context(void);
 void set_core_context(CoreContext *ctx);
-void core_context_init(void);
+int core_context_init(void);
 
-void core_run(void);
+float core_get_delta_time(void);
+struct SDL_Window *core_get_window(void);
+
+int core_run(void);
 
 #endif // SUSTAIN_CORE_H

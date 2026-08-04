@@ -1,16 +1,38 @@
 #include "core/core.h"
+
 #include "core/config.h"
+#include "core/input.h"
 #include "core/log.h"
 #include "ecs/components.h"
 #include "gui/gui.h"
-#include "raylib.h"
+#include "gui/nuklear_impl.h"
 #include "renderer/renderer.h"
-#include <assert.h>
+#include <SDL3/SDL.h>
+#include <glad/gl.h>
+#include <nuklear.h>
 
 static CoreContext **get_core_context_ptr_internal(void)
 {
 	static CoreContext *g_ctx = NULL;
 	return &g_ctx;
+}
+
+static SDL_Window **get_window_ptr_internal(void)
+{
+	static SDL_Window *w = NULL;
+	return &w;
+}
+
+static SDL_GLContext *get_gl_context_ptr_internal(void)
+{
+	static SDL_GLContext c = NULL;
+	return &c;
+}
+
+static float *get_delta_time_ptr_internal(void)
+{
+	static float dt = 0.016f;
+	return &dt;
 }
 
 CoreContext *get_core_context(void) { return *get_core_context_ptr_internal(); }
@@ -20,15 +42,41 @@ void set_core_context(CoreContext *ctx)
 	*get_core_context_ptr_internal() = ctx;
 }
 
-void core_context_init(void)
+float core_get_delta_time(void) { return *get_delta_time_ptr_internal(); }
+
+SDL_Window *core_get_window(void) { return *get_window_ptr_internal(); }
+
+static void core_update_delta_time(void)
+{
+	static Uint64 last_tick = 0;
+	Uint64 now = SDL_GetPerformanceCounter();
+	Uint64 freq = SDL_GetPerformanceFrequency();
+	float dt = (last_tick == 0)
+		       ? 0.016f
+		       : (float)((double)(now - last_tick) / (double)freq);
+	last_tick = now;
+	if (dt > 0.1f) {
+		dt = 0.1f;
+	}
+	*get_delta_time_ptr_internal() = dt;
+}
+
+int core_context_init(void)
 {
 	CoreContext *ctx = get_core_context();
 
-	int font_size = 12;
-	struct nk_context *nk_ctx = InitNuklear(font_size);
-	ctx->nk_ctx = nk_ctx;
+	int font_size = 16;
+	ctx->nk_ctx = nuklear_init(font_size);
+	if (ctx->nk_ctx == NULL) {
+		log_printf(LOG_LEVEL_ERROR, "nuklear init failed");
+		return -1;
+	}
 
 	ctx->world = ecs_init();
+	if (ctx->world == NULL) {
+		log_printf(LOG_LEVEL_ERROR, "ecs init failed");
+		return -1;
+	}
 	components_register(ctx->world);
 
 	ctx->selected_entity = 0;
@@ -39,17 +87,75 @@ void core_context_init(void)
 
 	renderer_context_init(ctx);
 	editor_camera_init(&ctx->editor_camera);
+	return 0;
 }
 
-static void core_init_window(void)
+static void core_sdl_cleanup(void)
 {
-	SetTraceLogLevel(LOG_WARNING);
+	SDL_GLContext *gl = get_gl_context_ptr_internal();
+	SDL_Window **win = get_window_ptr_internal();
+	if (*gl != NULL) {
+		SDL_GL_DestroyContext(*gl);
+		*gl = NULL;
+	}
+	if (*win != NULL) {
+		SDL_DestroyWindow(*win);
+		*win = NULL;
+	}
+	SDL_Quit();
+}
 
+static int core_init_fatal(const char *message)
+{
+	log_printf(LOG_LEVEL_ERROR, "%s: %s", message, SDL_GetError());
+	core_sdl_cleanup();
+	return -1;
+}
+
+static int core_init_window(void)
+{
 	window_property_init();
 	WindowProperty *window = get_window_property();
-	SetConfigFlags(window->flags);
-	InitWindow(window->width, window->height, window->title);
-  log_printf(LOG_LEVEL_INFO, "window initialized");
+
+	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+		return core_init_fatal("SDL_Init failed");
+	}
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+			    SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+	SDL_Window **window_ptr = get_window_ptr_internal();
+	SDL_GLContext *gl_context_ptr = get_gl_context_ptr_internal();
+
+	*window_ptr = SDL_CreateWindow(
+	    window->title, window->width, window->height,
+	    SDL_WINDOW_OPENGL | (SDL_WindowFlags)window->flags);
+	if (*window_ptr == NULL) {
+		return core_init_fatal("SDL_CreateWindow failed");
+	}
+
+	*gl_context_ptr = SDL_GL_CreateContext(*window_ptr);
+	if (*gl_context_ptr == NULL) {
+		return core_init_fatal("SDL_GL_CreateContext failed");
+	}
+
+	if (!SDL_GL_SetSwapInterval(1)) {
+		log_printf(LOG_LEVEL_WARN, "vsync unavailable: %s",
+			   SDL_GetError());
+	}
+
+	if (gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress) == 0) {
+		log_printf(LOG_LEVEL_ERROR, "gladLoadGL failed");
+		core_sdl_cleanup();
+		return -1;
+	}
+
+	log_printf(LOG_LEVEL_INFO, "window initialized");
+	return 0;
 }
 
 static void core_close_window(CoreContext *ctx)
@@ -59,96 +165,113 @@ static void core_close_window(CoreContext *ctx)
 	}
 	renderer_context_cleanup(&ctx->renderer);
 	ecs_fini(ctx->world);
-	UnloadNuklear(ctx->nk_ctx);
-	CloseWindow();
-  log_printf(LOG_LEVEL_INFO, "window closed");
+	nuklear_shutdown(ctx->nk_ctx);
+
+	core_sdl_cleanup();
+	log_printf(LOG_LEVEL_INFO, "window closed");
+}
+
+static ecs_entity_t create_primitive(CoreContext *ctx, const char *name,
+				     PrimitiveType type, Color color,
+				     vec3s position, vec3s scale,
+				     ecs_entity_t parent)
+{
+	ecs_entity_t e = ecs_new(ctx->world);
+	ecs_set_name(ctx->world, e, name);
+	ecs_add(ctx->world, e, GameObject);
+	if (parent != 0) {
+		ecs_add_pair(ctx->world, e, EcsChildOf, parent);
+	}
+	ecs_set(ctx->world, e, Transform3D,
+		{.position = position,
+		 .rotation = {{0.0f, 0.0f, 0.0f}},
+		 .scale = scale});
+	ecs_set(ctx->world, e, MeshRenderer, {.type = type, .color = color});
+	return e;
 }
 
 static void core_load_content(CoreContext *ctx)
 {
-	// blue cube
-	ecs_entity_t cube = ecs_new(ctx->world);
-	ecs_set_name(ctx->world, cube, "Blue Cube");
-	ecs_add(ctx->world, cube, GameObject);
-	ecs_set(ctx->world, cube, Transform3D,
-		{.position = {0.0f, 1.0f, 0.0f},
-		 .rotation = {0.0f, 0.0f, 0.0f},
-		 .scale = {2.0f, 2.0f, 2.0f}});
-	ecs_set(ctx->world, cube, MeshRenderer,
-		{.type = PRIMITIVE_CUBE, .color = (Color){80, 140, 220, 255}});
+	ecs_entity_t cube = create_primitive(
+	    ctx, "Blue Cube", PRIMITIVE_CUBE, (Color){80, 140, 220, 255},
+	    (vec3s){{0.0f, 1.0f, 0.0f}}, (vec3s){{2.0f, 2.0f, 2.0f}}, 0);
 
-	// red sphere
-	ecs_entity_t sphere = ecs_new(ctx->world);
-	ecs_set_name(ctx->world, sphere, "Red Sphere");
-	ecs_add(ctx->world, sphere, GameObject);
-	ecs_set(ctx->world, sphere, Transform3D,
-		{.position = {4.0f, 1.0f, 0.0f},
-		 .rotation = {0.0f, 0.0f, 0.0f},
-		 .scale = {1.0f, 1.0f, 1.0f}});
-	ecs_set(ctx->world, sphere, MeshRenderer,
-		{.type = PRIMITIVE_SPHERE, .color = (Color){220, 80, 80, 255}});
+	create_primitive(ctx, "Red Sphere", PRIMITIVE_SPHERE,
+			 (Color){220, 80, 80, 255}, (vec3s){{4.0f, 1.0f, 0.0f}},
+			 (vec3s){{1.0f, 1.0f, 1.0f}}, 0);
 
-	// child cube
-	ecs_entity_t child_cube = ecs_new(ctx->world);
-	ecs_set_name(ctx->world, child_cube, "Child Cube");
-	ecs_add(ctx->world, child_cube, GameObject);
-	ecs_add_pair(ctx->world, child_cube, EcsChildOf, cube);
-	ecs_set(ctx->world, child_cube, Transform3D,
-		{.position = {0.0f, 2.0f, 0.0f},
-		 .rotation = {0.0f, 0.0f, 0.0f},
-		 .scale = {0.5f, 0.5f, 0.5f}});
-	ecs_set(ctx->world, child_cube, MeshRenderer,
-		{.type = PRIMITIVE_CUBE, .color = (Color){80, 220, 140, 255}});
+	create_primitive(
+	    ctx, "Child Cube", PRIMITIVE_CUBE, (Color){80, 220, 140, 255},
+	    (vec3s){{0.0f, 2.0f, 0.0f}}, (vec3s){{0.5f, 0.5f, 0.5f}}, cube);
 }
 
 static void core_loop_update(CoreContext *ctx)
 {
-	if (IsWindowResized()) {
+	if (input_window_resized()) {
 		WindowProperty *w = get_window_property();
-		w->width = GetScreenWidth();
-		w->height = GetScreenHeight();
+		w->width = input_window_width();
+		w->height = input_window_height();
 	}
 
-	ecs_progress(ctx->world, GetFrameTime());
+	ecs_progress(ctx->world, *get_delta_time_ptr_internal());
 }
 
 static void core_loop_render_ui(CoreContext *ctx) { gui_render_ui(ctx); }
 
 static void core_loop_render(CoreContext *ctx)
 {
-	DrawNuklear(ctx->nk_ctx);
+	WindowProperty *w = get_window_property();
+
+	glViewport(0, 0, w->width, w->height);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	nuklear_render(ctx->nk_ctx, w->width, w->height);
 
 	if (ctx->renderer.viewport_initialized) {
-		Texture2D vp_tex = ctx->renderer.viewport_rt.texture;
-		Rectangle src = {0, 0, (float)vp_tex.width,
-				 -(float)vp_tex.height};
-		Rectangle dst = ctx->renderer.viewport_draw_rect;
-		DrawTexturePro(vp_tex, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
+		renderer_blit_viewport(&ctx->renderer,
+				       ctx->renderer.viewport_draw_rect,
+				       w->width, w->height);
 	}
 }
 
 static void core_loop(CoreContext *ctx)
 {
-	while (!WindowShouldClose()) {
-		UpdateNuklear(ctx->nk_ctx);
+	while (!input_quit_requested()) {
+		core_update_delta_time();
+		input_frame_begin();
+
+		nk_input_begin(ctx->nk_ctx);
+		SDL_Event evt;
+		while (SDL_PollEvent(&evt)) {
+			nuklear_handle_event(ctx->nk_ctx, &evt);
+			input_handle_event(&evt);
+		}
+		nk_input_end(ctx->nk_ctx);
+
 		core_loop_update(ctx);
 		core_loop_render_ui(ctx);
-		BeginDrawing();
-		ClearBackground(BLACK);
 		core_loop_render(ctx);
-		EndDrawing();
+
+		SDL_GL_SwapWindow(*get_window_ptr_internal());
 	}
 }
 
-void core_run(void)
+int core_run(void)
 {
 	static CoreContext ctx = {0};
 	set_core_context(&ctx);
 	CoreContext *ctx_ptr = get_core_context();
 
-	core_init_window();
-	core_context_init();
+	if (core_init_window() != 0) {
+		return 1;
+	}
+	if (core_context_init() != 0) {
+		core_sdl_cleanup();
+		return 1;
+	}
 	core_load_content(ctx_ptr);
 	core_loop(ctx_ptr);
 	core_close_window(ctx_ptr);
+	return 0;
 }

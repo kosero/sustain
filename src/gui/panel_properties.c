@@ -1,35 +1,32 @@
 #include "gui/panel_properties.h"
 #include "ecs/components.h"
-#include "raylib-nuklear.h"
+#include "nuklear.h"
 
 static void draw_vec3_property(struct nk_context *nk, const char *label,
-			       Vector3 *vec, float min, float max, float step)
+			       const char *prop_x, const char *prop_y,
+			       const char *prop_z, vec3s *vec, float min,
+			       float max, float step)
 {
 	nk_layout_row_dynamic(nk, 20, 1);
 	nk_label(nk, label, NK_TEXT_LEFT);
 
-	char buf_x[64];
-	char buf_y[64];
-	char buf_z[64];
-	(void)snprintf(buf_x, sizeof(buf_x), "%s X", label);
-	(void)snprintf(buf_y, sizeof(buf_y), "%s Y", label);
-	(void)snprintf(buf_z, sizeof(buf_z), "%s Z", label);
-
 	nk_layout_row_dynamic(nk, 25, 1);
-	nk_property_float(nk, buf_x, min, &vec->x, max, step, step * 0.5f);
-	nk_property_float(nk, buf_y, min, &vec->y, max, step, step * 0.5f);
-	nk_property_float(nk, buf_z, min, &vec->z, max, step, step * 0.5f);
+	nk_property_float(nk, prop_x, min, &vec->x, max, step, step * 0.5f);
+	nk_property_float(nk, prop_y, min, &vec->y, max, step, step * 0.5f);
+	nk_property_float(nk, prop_z, min, &vec->z, max, step, step * 0.5f);
 }
 
 static void draw_transform_section(struct nk_context *nk, Transform3D *t)
 {
 	if (nk_tree_push(nk, NK_TREE_TAB, "Transform3D", NK_MAXIMIZED)) {
-		draw_vec3_property(nk, "Position", &t->position, -1000.0f,
+		draw_vec3_property(nk, "Position", "Position X", "Position Y",
+				   "Position Z", &t->position, -1000.0f,
 				   1000.0f, 0.1f);
-		draw_vec3_property(nk, "Rotation", &t->rotation, -360.0f,
-				   360.0f, 1.0f);
-		draw_vec3_property(nk, "Scale", &t->scale, -100.0f, 100.0f,
-				   0.1f);
+		draw_vec3_property(nk, "Rotation", "Rotation X", "Rotation Y",
+				   "Rotation Z", &t->rotation, -360.0f, 360.0f,
+				   1.0f);
+		draw_vec3_property(nk, "Scale", "Scale X", "Scale Y", "Scale Z",
+				   &t->scale, -100.0f, 100.0f, 0.1f);
 		nk_tree_pop(nk);
 	}
 }

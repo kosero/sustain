@@ -1,6 +1,5 @@
 #include "core/config.h"
-#include "raylib.h"
-#include <stdlib.h>
+#include "SDL3/SDL.h"
 
 static WindowProperty **get_window_property_ptr_internal(void)
 {
@@ -30,5 +29,5 @@ void window_property_init(void)
 	window->title = "Sustain";
 	window->width = 800;
 	window->height = 600;
-	window->flags = FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT;
+	window->flags = (unsigned int)SDL_WINDOW_RESIZABLE;
 }
