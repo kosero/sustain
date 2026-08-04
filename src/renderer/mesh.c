@@ -53,7 +53,7 @@ void gl_mesh_destroy(GLMesh *mesh)
 	mesh->index_count = 0;
 }
 
-void gl_mesh_build_cube(GLMesh *solid, GLMesh *wire)
+void gl_mesh_build_cube(GLMesh *solid)
 {
 	// cube corners
 	const float corners[8][3] = {
@@ -99,27 +99,6 @@ void gl_mesh_build_cube(GLMesh *solid, GLMesh *wire)
 
 	gl_mesh_create(solid, GL_MESH_FORMAT_POS_EXT, &verts[0][0], 24, indices,
 		       36);
-
-	const int wire_edges[12][2] = {
-	    {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
-	    {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7},
-	};
-
-	float wire_verts[8][3];
-	unsigned int wire_indices[24];
-
-	for (int i = 0; i < 8; i++) {
-		wire_verts[i][0] = corners[i][0];
-		wire_verts[i][1] = corners[i][1];
-		wire_verts[i][2] = corners[i][2];
-	}
-	for (int e = 0; e < 12; e++) {
-		wire_indices[(e * 2) + 0] = (unsigned int)wire_edges[e][0];
-		wire_indices[(e * 2) + 1] = (unsigned int)wire_edges[e][1];
-	}
-
-	gl_mesh_create(wire, GL_MESH_FORMAT_POS, &wire_verts[0][0], 8,
-		       wire_indices, 24);
 }
 
 int gl_mesh_build_sphere(GLMesh *mesh, int rings, int sectors)

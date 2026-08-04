@@ -1,5 +1,5 @@
 #include "core/config.h"
-#include "SDL3/SDL.h"
+#include "SDL3/SDL_video.h"
 
 static WindowProperty **get_window_property_ptr_internal(void)
 {

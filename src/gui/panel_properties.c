@@ -11,9 +11,12 @@ static void draw_vec3_property(struct nk_context *nk, const char *label,
 	nk_label(nk, label, NK_TEXT_LEFT);
 
 	nk_layout_row_dynamic(nk, 25, 1);
-	nk_property_float(nk, prop_x, min, &vec->x, max, step, step * 0.5f);
-	nk_property_float(nk, prop_y, min, &vec->y, max, step, step * 0.5f);
-	nk_property_float(nk, prop_z, min, &vec->z, max, step, step * 0.5f);
+	nk_property_float(nk, prop_x, min, &vec->raw[0], max, step,
+			  step * 0.5f);
+	nk_property_float(nk, prop_y, min, &vec->raw[1], max, step,
+			  step * 0.5f);
+	nk_property_float(nk, prop_z, min, &vec->raw[2], max, step,
+			  step * 0.5f);
 }
 
 static void draw_transform_section(struct nk_context *nk, Transform3D *t)

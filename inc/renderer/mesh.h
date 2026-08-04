@@ -21,7 +21,7 @@ void gl_mesh_create(GLMesh *mesh, GLMeshFormat format, const float *vertices,
 		    size_t index_count);
 void gl_mesh_destroy(GLMesh *mesh);
 
-void gl_mesh_build_cube(GLMesh *solid, GLMesh *wire);
+void gl_mesh_build_cube(GLMesh *solid);
 int gl_mesh_build_sphere(GLMesh *mesh, int rings, int sectors);
 int gl_mesh_build_grid(GLMesh *mesh, int half_size, float spacing);
 

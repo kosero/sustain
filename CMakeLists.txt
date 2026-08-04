@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(sustain LANGUAGES C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -112,6 +112,7 @@ if(MSVC)
         /wd4244
         /wd4701
     )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE 
         -Wall 

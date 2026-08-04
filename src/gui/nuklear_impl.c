@@ -34,12 +34,18 @@
 #include <SDL3/SDL.h>
 #include <assert.h>
 #include <glad/gl.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 struct nk_gl_vertex {
 	float position[2];
 	float uv[2];
 	nk_byte col[4];
+};
+
+struct nk_gl_vertex_align_probe {
+	char c;
+	struct nk_gl_vertex v;
 };
 
 struct nk_gl_device {
@@ -341,7 +347,8 @@ void nuklear_render(struct nk_context *ctx, int width, int height)
 	struct nk_convert_config config = {0};
 	config.vertex_layout = vertex_layout;
 	config.vertex_size = sizeof(struct nk_gl_vertex);
-	config.vertex_alignment = NK_ALIGNOF(struct nk_gl_vertex);
+	config.vertex_alignment =
+	    offsetof(struct nk_gl_vertex_align_probe, v);
 	config.tex_null = dev->tex_null;
 	config.circle_segment_count = 22;
 	config.curve_segment_count = 22;
@@ -356,6 +363,7 @@ void nuklear_render(struct nk_context *ctx, int width, int height)
 	nk_buffer_init_default(&ebuf);
 
 	nk_flags result = nk_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);
+	(void)result;
 	assert(result == NK_CONVERT_SUCCESS);
 
 	GLfloat ortho[4][4] = {

@@ -136,7 +136,7 @@ void renderer_context_init(struct CoreContext *ctx)
 	rctx->grid_proj_loc = gl_shader_location(rctx->grid_shader, "uProj");
 	rctx->blit_tex_loc = gl_shader_location(rctx->blit_shader, "uTexture");
 
-	gl_mesh_build_cube(&rctx->cube_mesh, &rctx->cube_wire_mesh);
+	gl_mesh_build_cube(&rctx->cube_mesh);
 	if (gl_mesh_build_sphere(&rctx->sphere_mesh, RENDERER_SPHERE_RINGS,
 				 RENDERER_SPHERE_SECTORS) != 0) {
 		log_printf(LOG_LEVEL_ERROR, "sphere mesh allocation failed");
@@ -211,8 +211,8 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 	vec3s light_world = glms_vec3_normalize((vec3s){{0.5f, 1.0f, 0.6f}});
 	vec3s light_view =
 	    glms_vec3_normalize(glms_mat4_mulv3(view, light_world, 0.0f));
-	glUniform3f(rctx->prim_light_loc, light_view.x, light_view.y,
-		    light_view.z);
+	glUniform3f(rctx->prim_light_loc, light_view.raw[0],
+		    light_view.raw[1], light_view.raw[2]);
 
 	ecs_iter_t it = ecs_query_iter(world, rctx->render_query);
 	while (ecs_query_next(&it)) {
@@ -222,9 +222,12 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 		for (int i = 0; i < it.count; i++) {
 			mat4s model = glms_mat4_identity();
 			model = glms_translate(model, t[i].position);
-			model = glms_rotate_y(model, glm_rad(t[i].rotation.y));
-			model = glms_rotate_x(model, glm_rad(t[i].rotation.x));
-			model = glms_rotate_z(model, glm_rad(t[i].rotation.z));
+			model = glms_rotate_y(model,
+					       glm_rad(t[i].rotation.raw[1]));
+			model = glms_rotate_x(model,
+					       glm_rad(t[i].rotation.raw[0]));
+			model = glms_rotate_z(model,
+					       glm_rad(t[i].rotation.raw[2]));
 			model = glms_scale(model, t[i].scale);
 
 			vec4s color = renderer_color_to_vec4s(m[i].color);
@@ -232,8 +235,9 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 			if (m[i].type == PRIMITIVE_CUBE) {
 				glUniformMatrix4fv(rctx->prim_model_loc, 1,
 						   GL_FALSE, &model.raw[0][0]);
-				glUniform4f(rctx->prim_color_loc, color.x,
-					    color.y, color.z, color.w);
+				glUniform4f(rctx->prim_color_loc, color.raw[0],
+					    color.raw[1], color.raw[2],
+					    color.raw[3]);
 				glBindVertexArray(rctx->cube_mesh.vao);
 				glDrawElements(GL_TRIANGLES,
 					       rctx->cube_mesh.index_count,
@@ -248,8 +252,9 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 			} else if (m[i].type == PRIMITIVE_SPHERE) {
 				glUniformMatrix4fv(rctx->prim_model_loc, 1,
 						   GL_FALSE, &model.raw[0][0]);
-				glUniform4f(rctx->prim_color_loc, color.x,
-					    color.y, color.z, color.w);
+				glUniform4f(rctx->prim_color_loc, color.raw[0],
+					    color.raw[1], color.raw[2],
+					    color.raw[3]);
 				glBindVertexArray(rctx->sphere_mesh.vao);
 				glDrawElements(GL_TRIANGLES,
 					       rctx->sphere_mesh.index_count,

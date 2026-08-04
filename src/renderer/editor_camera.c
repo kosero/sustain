@@ -43,8 +43,8 @@ void editor_camera_init(EditorCamera *cam)
 
 	vec3s forward = glms_vec3_normalize(
 	    glms_vec3_sub((vec3s){{0.0f, 0.0f, 0.0f}}, cam->camera.position));
-	cam->pitch = asinf(forward.y);
-	cam->yaw = atan2f(forward.x, -forward.z);
+	cam->pitch = asinf(forward.raw[1]);
+	cam->yaw = atan2f(forward.raw[0], -forward.raw[2]);
 	editor_camera_recompute_target(cam);
 }
 
@@ -92,10 +92,10 @@ void editor_camera_update(EditorCamera *cam, bool is_hovered)
 					    -move_speed));
 		}
 		if (input_key_down(SDL_SCANCODE_E)) {
-			cam->camera.position.y += move_speed;
+			cam->camera.position.raw[1] += move_speed;
 		}
 		if (input_key_down(SDL_SCANCODE_Q)) {
-			cam->camera.position.y -= move_speed;
+			cam->camera.position.raw[1] -= move_speed;
 		}
 
 		cam->yaw += input_mouse_delta_x() * CAMERA_MOUSE_SENSITIVITY;
