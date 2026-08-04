@@ -61,6 +61,71 @@ static void handle_node_selection(CoreContext *ctx, ecs_entity_t entity,
 	}
 }
 
+typedef struct {
+	struct nk_style_item sel_normal, sel_hover, sel_pressed;
+	struct nk_style_item sel_normal_act, sel_hover_act, sel_pressed_act;
+	struct nk_style_item tab_bg;
+	struct nk_style_item min_norm, min_hov, min_act;
+	struct nk_style_item max_norm, max_hov, max_act;
+} TreeStyleBackup;
+
+static TreeStyleBackup push_transparent_tree_style(struct nk_context *nk)
+{
+	TreeStyleBackup b = {
+	    .sel_normal = nk->style.selectable.normal,
+	    .sel_hover = nk->style.selectable.hover,
+	    .sel_pressed = nk->style.selectable.pressed,
+	    .sel_normal_act = nk->style.selectable.normal_active,
+	    .sel_hover_act = nk->style.selectable.hover_active,
+	    .sel_pressed_act = nk->style.selectable.pressed_active,
+	    .tab_bg = nk->style.tab.background,
+	    .min_norm = nk->style.tab.node_minimize_button.normal,
+	    .min_hov = nk->style.tab.node_minimize_button.hover,
+	    .min_act = nk->style.tab.node_minimize_button.active,
+	    .max_norm = nk->style.tab.node_maximize_button.normal,
+	    .max_hov = nk->style.tab.node_maximize_button.hover,
+	    .max_act = nk->style.tab.node_maximize_button.active,
+	};
+
+	struct nk_style_item clear = nk_style_item_color(nk_rgba(0, 0, 0, 0));
+
+	nk->style.selectable.normal = clear;
+	nk->style.selectable.hover = clear;
+	nk->style.selectable.pressed = clear;
+	nk->style.selectable.normal_active = clear;
+	nk->style.selectable.hover_active = clear;
+	nk->style.selectable.pressed_active = clear;
+
+	nk->style.tab.background = clear;
+	nk->style.tab.node_minimize_button.normal = clear;
+	nk->style.tab.node_minimize_button.hover = clear;
+	nk->style.tab.node_minimize_button.active = clear;
+	nk->style.tab.node_maximize_button.normal = clear;
+	nk->style.tab.node_maximize_button.hover = clear;
+	nk->style.tab.node_maximize_button.active = clear;
+
+	return b;
+}
+
+static void pop_transparent_tree_style(struct nk_context *nk,
+				       const TreeStyleBackup *b)
+{
+	nk->style.selectable.normal = b->sel_normal;
+	nk->style.selectable.hover = b->sel_hover;
+	nk->style.selectable.pressed = b->sel_pressed;
+	nk->style.selectable.normal_active = b->sel_normal_act;
+	nk->style.selectable.hover_active = b->sel_hover_act;
+	nk->style.selectable.pressed_active = b->sel_pressed_act;
+
+	nk->style.tab.background = b->tab_bg;
+	nk->style.tab.node_minimize_button.normal = b->min_norm;
+	nk->style.tab.node_minimize_button.hover = b->min_hov;
+	nk->style.tab.node_minimize_button.active = b->min_act;
+	nk->style.tab.node_maximize_button.normal = b->max_norm;
+	nk->style.tab.node_maximize_button.hover = b->max_hov;
+	nk->style.tab.node_maximize_button.active = b->max_act;
+}
+
 static void draw_entity_node(CoreContext *ctx, ecs_entity_t root)
 {
 	struct node_task stack[NODE_STACK_CAPACITY];
@@ -69,21 +134,33 @@ static void draw_entity_node(CoreContext *ctx, ecs_entity_t root)
 		return;
 	}
 
+	struct nk_context *nk = ctx->nk_ctx;
+
+	TreeStyleBackup style_backup = push_transparent_tree_style(nk);
+
 	while (depth > 0) {
 		struct node_task task = stack[--depth];
 
 		if (task.close) {
-			nk_tree_element_pop(ctx->nk_ctx);
+			nk_tree_element_pop(nk);
 			continue;
 		}
 
 		nk_bool is_selected = (ctx->selected_entity == task.entity);
 		nk_bool was_selected = is_selected;
 
-		if (nk_tree_element_push_id(ctx->nk_ctx, NK_TREE_NODE,
-					    node_name(ctx->world, task.entity),
-					    NK_MINIMIZED, &is_selected,
-					    (int)task.entity)) {
+		struct nk_rect row_bounds = nk_widget_bounds(nk);
+
+		if (is_selected) {
+			struct nk_command_buffer *canvas =
+			    nk_window_get_canvas(nk);
+			nk_fill_rect(canvas, row_bounds, 2.0f,
+				     nk_rgba(65, 105, 225, 120));
+		}
+
+		if (nk_tree_element_push_id(
+			nk, NK_TREE_NODE, node_name(ctx->world, task.entity),
+			NK_MINIMIZED, &is_selected, (int)task.entity)) {
 			ecs_entity_t children[NODE_STACK_CAPACITY];
 			int child_count = collect_gameobject_children(
 			    ctx, task.entity, children, NODE_STACK_CAPACITY);
@@ -100,6 +177,8 @@ static void draw_entity_node(CoreContext *ctx, ecs_entity_t root)
 		handle_node_selection(ctx, task.entity, is_selected,
 				      was_selected);
 	}
+
+	pop_transparent_tree_style(nk, &style_backup);
 }
 
 void gui_panel_hierarchy(CoreContext *ctx)
