@@ -5,7 +5,7 @@
 #include "gui/panel_viewport.h"
 #include "nuklear.h"
 
-static const float gui_panel_width = 250.0f;
+static const float gui_panel_width = 350.0f;
 
 void gui_render_ui(CoreContext *ctx)
 {

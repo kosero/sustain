@@ -3,33 +3,39 @@
 #include "nuklear.h"
 
 static void draw_vec3_property(struct nk_context *nk, const char *label,
-			       const char *prop_x, const char *prop_y,
-			       const char *prop_z, vec3s *vec, float min,
-			       float max, float step)
+			       vec3s *vec, float min, float max, float step)
 {
-	nk_layout_row_dynamic(nk, 20, 1);
+	struct nk_color colors[3] = {
+	    nk_rgb(220, 80, 80),  /* X - red */
+	    nk_rgb(80, 200, 80),  /* Y - green */
+	    nk_rgb(80, 140, 220), /* Z - blue */
+	};
+
+	nk_layout_row_dynamic(nk, 18, 1);
 	nk_label(nk, label, NK_TEXT_LEFT);
 
-	nk_layout_row_dynamic(nk, 25, 1);
-	nk_property_float(nk, prop_x, min, &vec->raw[0], max, step,
-			  step * 0.5f);
-	nk_property_float(nk, prop_y, min, &vec->raw[1], max, step,
-			  step * 0.5f);
-	nk_property_float(nk, prop_z, min, &vec->raw[2], max, step,
-			  step * 0.5f);
-}
+	nk_layout_row_dynamic(nk, 22, 3);
 
+	for (int i = 0; i < 3; i++) {
+		struct nk_color old = nk->style.property.border_color;
+		nk->style.property.label_normal = colors[i];
+
+		char id[4] = {'#', (char)('x' + i), '\0'};
+		nk_property_float(nk, id, min, &vec->raw[i], max, step,
+				  step * 0.5f);
+
+		nk->style.property.label_normal = old;
+	}
+}
 static void draw_transform_section(struct nk_context *nk, Transform3D *t)
 {
 	if (nk_tree_push(nk, NK_TREE_TAB, "Transform3D", NK_MAXIMIZED)) {
-		draw_vec3_property(nk, "Position", "Position X", "Position Y",
-				   "Position Z", &t->position, -1000.0f,
+		draw_vec3_property(nk, "Position", &t->position, -1000.0f,
 				   1000.0f, 0.1f);
-		draw_vec3_property(nk, "Rotation", "Rotation X", "Rotation Y",
-				   "Rotation Z", &t->rotation, -360.0f, 360.0f,
-				   1.0f);
-		draw_vec3_property(nk, "Scale", "Scale X", "Scale Y", "Scale Z",
-				   &t->scale, -100.0f, 100.0f, 0.1f);
+		draw_vec3_property(nk, "Rotation", &t->rotation, -360.0f,
+				   360.0f, 1.0f);
+		draw_vec3_property(nk, "Scale", &t->scale, -100.0f, 100.0f,
+				   0.1f);
 		nk_tree_pop(nk);
 	}
 }
