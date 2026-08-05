@@ -6,29 +6,37 @@
 
 #define GL_MESH_PI 3.14159265358979323846f
 
+static inline GLsizei get_format_stride(GLMeshFormat format)
+{
+	return (format == GL_MESH_FORMAT_POS) ? 3 : 6;
+}
+
 void gl_mesh_create(GLMesh *mesh, GLMeshFormat format, const float *vertices,
 		    size_t vertex_count, const unsigned int *indices,
-		    size_t index_count)
+		    size_t index_count, GLenum usage)
 {
-	GLsizei stride = (format == GL_MESH_FORMAT_POS) ? 3 : 6;
+	GLsizei stride = get_format_stride(format);
+	mesh->usage = usage;
+	mesh->vbo_capacity_bytes = vertex_count * stride * sizeof(float);
+	mesh->ebo_capacity_bytes = index_count * sizeof(unsigned int);
 
 	glGenVertexArrays(1, &mesh->vao);
 	glGenBuffers(1, &mesh->vbo);
 	glGenBuffers(1, &mesh->ebo);
 
 	glBindVertexArray(mesh->vao);
+
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
-	glBufferData(GL_ARRAY_BUFFER,
-		     (GLsizeiptr)(vertex_count * stride * sizeof(float)),
-		     vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)mesh->vbo_capacity_bytes,
+		     vertices, usage);
+
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		     (GLsizeiptr)(index_count * sizeof(unsigned int)), indices,
-		     GL_STATIC_DRAW);
+		     (GLsizeiptr)mesh->ebo_capacity_bytes, indices, usage);
 
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-			      stride * (GLsizei)sizeof(float), NULL);
+			      stride * (GLsizei)sizeof(float), (void *)0);
 
 	if (format == GL_MESH_FORMAT_POS_EXT) {
 		glEnableVertexAttribArray(1);
@@ -42,8 +50,56 @@ void gl_mesh_create(GLMesh *mesh, GLMeshFormat format, const float *vertices,
 	mesh->index_count = (GLsizei)index_count;
 }
 
+void gl_mesh_update(GLMesh *mesh, GLMeshFormat format, const float *vertices,
+		    size_t vertex_count, const unsigned int *indices,
+		    size_t index_count)
+{
+	if (!mesh || mesh->vao == 0) {
+		return;
+	}
+
+	GLsizei stride = get_format_stride(format);
+	size_t required_vbo_bytes = vertex_count * stride * sizeof(float);
+	size_t required_ebo_bytes = index_count * sizeof(unsigned int);
+
+	glBindVertexArray(mesh->vao);
+
+	if (vertices && required_vbo_bytes > 0) {
+		glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
+		if (required_vbo_bytes > mesh->vbo_capacity_bytes) {
+			glBufferData(GL_ARRAY_BUFFER,
+				     (GLsizeiptr)required_vbo_bytes, vertices,
+				     mesh->usage);
+			mesh->vbo_capacity_bytes = required_vbo_bytes;
+		} else {
+			glBufferSubData(GL_ARRAY_BUFFER, 0,
+					(GLsizeiptr)required_vbo_bytes,
+					vertices);
+		}
+	}
+
+	if (indices && required_ebo_bytes > 0) {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ebo);
+		if (required_ebo_bytes > mesh->ebo_capacity_bytes) {
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+				     (GLsizeiptr)required_ebo_bytes, indices,
+				     mesh->usage);
+			mesh->ebo_capacity_bytes = required_ebo_bytes;
+		} else {
+			glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+					(GLsizeiptr)required_ebo_bytes,
+					indices);
+		}
+		mesh->index_count = (GLsizei)index_count;
+	}
+	glBindVertexArray(0);
+}
+
 void gl_mesh_destroy(GLMesh *mesh)
 {
+	if (!mesh) {
+		return;
+	}
 	glDeleteVertexArrays(1, &mesh->vao);
 	glDeleteBuffers(1, &mesh->vbo);
 	glDeleteBuffers(1, &mesh->ebo);
@@ -51,18 +107,18 @@ void gl_mesh_destroy(GLMesh *mesh)
 	mesh->vbo = 0;
 	mesh->ebo = 0;
 	mesh->index_count = 0;
+	mesh->vbo_capacity_bytes = 0;
+	mesh->ebo_capacity_bytes = 0;
 }
 
 void gl_mesh_build_cube(GLMesh *solid)
 {
-	// cube corners
 	const float corners[8][3] = {
 	    {-1.0f, -1.0f, -1.0f}, {1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, -1.0f},
 	    {-1.0f, 1.0f, -1.0f},  {-1.0f, -1.0f, 1.0f}, {1.0f, -1.0f, 1.0f},
 	    {1.0f, 1.0f, 1.0f},	   {-1.0f, 1.0f, 1.0f},
 	};
 
-	// faces: normal + 4 corners (CCW from outside)
 	const struct CubeFace {
 		float n[3];
 		int c[4];
@@ -98,7 +154,7 @@ void gl_mesh_build_cube(GLMesh *solid)
 	}
 
 	gl_mesh_create(solid, GL_MESH_FORMAT_POS_EXT, &verts[0][0], 24, indices,
-		       36);
+		       36, GL_STATIC_DRAW);
 }
 
 int gl_mesh_build_sphere(GLMesh *mesh, int rings, int sectors)
@@ -151,7 +207,7 @@ int gl_mesh_build_sphere(GLMesh *mesh, int rings, int sectors)
 	}
 
 	gl_mesh_create(mesh, GL_MESH_FORMAT_POS_EXT, verts, vertex_count,
-		       indices, index_count);
+		       indices, index_count, GL_STATIC_DRAW);
 	free(verts);
 	free(indices);
 	return 0;
@@ -212,7 +268,7 @@ int gl_mesh_build_grid(GLMesh *mesh, int half_size, float spacing)
 	}
 
 	gl_mesh_create(mesh, GL_MESH_FORMAT_POS_EXT, verts, vertex_count,
-		       indices, index_count);
+		       indices, index_count, GL_STATIC_DRAW);
 	free(verts);
 	free(indices);
 	return 0;

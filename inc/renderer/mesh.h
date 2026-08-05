@@ -14,9 +14,15 @@ typedef struct {
 	GLuint vbo;
 	GLuint ebo;
 	GLsizei index_count;
+	GLenum usage;
+	size_t vbo_capacity_bytes;
+	size_t ebo_capacity_bytes;
 } GLMesh;
 
 void gl_mesh_create(GLMesh *mesh, GLMeshFormat format, const float *vertices,
+		    size_t vertex_count, const unsigned int *indices,
+		    size_t index_count, GLenum usage);
+void gl_mesh_update(GLMesh *mesh, GLMeshFormat format, const float *vertices,
 		    size_t vertex_count, const unsigned int *indices,
 		    size_t index_count);
 void gl_mesh_destroy(GLMesh *mesh);
