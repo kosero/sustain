@@ -25,7 +25,7 @@ int log_printf(LOG_LEVEL level, const char *format, ...)
 		err = -1;
 	}
 
-	va_list args;
+	va_list args = {0};
 	va_start(args, format);
 	if (vfprintf(out, format, args) < 0) {
 		err = -1;
