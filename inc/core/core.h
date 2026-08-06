@@ -1,7 +1,6 @@
 #ifndef SUSTAIN_CORE_H
 #define SUSTAIN_CORE_H
 
-#include "math/camera.h"
 #include "renderer/editor_camera.h"
 #include "renderer/renderer.h"
 #include <flecs.h>

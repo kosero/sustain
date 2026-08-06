@@ -1,7 +1,8 @@
 #ifndef SUSTAIN_INPUT_H
 #define SUSTAIN_INPUT_H
 
-#include "SDL3/SDL.h"
+#include "SDL3/SDL_events.h"
+#include "SDL3/SDL_scancode.h"
 #include <stdbool.h>
 
 void input_frame_begin(void);

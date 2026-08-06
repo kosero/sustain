@@ -31,11 +31,6 @@
 #include "renderer/glutil.h"
 #include "renderer/shader.h"
 #include "shaders_generated.h"
-#include <SDL3/SDL.h>
-#include <assert.h>
-#include <glad/gl.h>
-#include <stddef.h>
-#include <stdlib.h>
 
 struct nk_gl_vertex {
 	float position[2];

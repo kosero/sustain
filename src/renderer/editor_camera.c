@@ -2,10 +2,6 @@
 
 #include "core/core.h"
 #include "core/input.h"
-#include <SDL3/SDL.h>
-#include <cglm/cglm.h>
-#include <cglm/struct.h>
-#include <math.h>
 
 #define CAMERA_MOUSE_SENSITIVITY 0.003f
 #define CAMERA_PITCH_LIMIT (GLM_PI_2f - 0.01f)

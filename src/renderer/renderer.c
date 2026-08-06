@@ -220,8 +220,7 @@ static mat4s renderer_model_from_transform(const Transform3D *t)
 static void renderer_draw_mesh(RendererContext *rctx, const GLMesh *mesh,
 			       mat4s model, vec4s color)
 {
-	glUniformMatrix4fv(rctx->prim_model_loc, 1, GL_FALSE,
-			   &model.raw[0][0]);
+	glUniformMatrix4fv(rctx->prim_model_loc, 1, GL_FALSE, &model.raw[0][0]);
 	glUniform4f(rctx->prim_color_loc, color.raw[0], color.raw[1],
 		    color.raw[2], color.raw[3]);
 	glBindVertexArray(mesh->vao);
@@ -280,9 +279,9 @@ static void renderer_draw_primitives_pass(RendererContext *rctx,
 			}
 			mat4s model = renderer_model_from_transform(&t[i]);
 			vec4s color = renderer_color_to_vec4s(m[i].color);
-			const GLMesh *mesh =
-			    m[i].type == PRIMITIVE_CUBE ? &rctx->cube_mesh
-							: &rctx->sphere_mesh;
+			const GLMesh *mesh = m[i].type == PRIMITIVE_CUBE
+						 ? &rctx->cube_mesh
+						 : &rctx->sphere_mesh;
 			renderer_draw_mesh(rctx, mesh, model, color);
 		}
 	}

@@ -1,7 +1,7 @@
 #ifndef SUSTAIN_NUKLEAR_IMPL_H
 #define SUSTAIN_NUKLEAR_IMPL_H
 
-#include "SDL3/SDL.h"
+#include "SDL3/SDL_events.h"
 struct nk_context;
 
 struct nk_context *nuklear_init(int font_size);

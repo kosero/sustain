@@ -1,14 +1,13 @@
 #include "core/core.h"
 
+#include "SDL3/SDL_init.h"
+#include "SDL3/SDL_timer.h"
 #include "core/config.h"
 #include "core/input.h"
 #include "core/log.h"
 #include "ecs/components.h"
 #include "gui/gui.h"
 #include "gui/nuklear_impl.h"
-#include "renderer/renderer.h"
-#include <SDL3/SDL.h>
-#include <glad/gl.h>
 #include <nuklear.h>
 
 static CoreContext **get_core_context_ptr_internal(void)
