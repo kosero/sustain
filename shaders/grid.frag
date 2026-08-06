@@ -25,14 +25,9 @@ void main() {
   float line = min(grid.x, grid.y);
   float gridIntensity = 1.0 - min(line, 1.0);
 
-  float axisX = 1.0 - min(abs(pos.x) / fwidth(pos.x), 1.0);
-  float axisZ = 1.0 - min(abs(pos.y) / fwidth(pos.y), 1.0);
-
   vec3 col = vec3(0.68, 0.69, 0.72) * gridIntensity;
-  col += vec3(0.75, 0.22, 0.22) * axisX * 0.7;
-  col += vec3(0.20, 0.42, 0.85) * axisZ * 0.7;
 
-  float intensity = max(gridIntensity, max(axisX, axisZ));
+  float intensity = gridIntensity;
   intensity *= fade;
 
   vec4 clip = uViewProj * vec4(worldPos, 1.0);

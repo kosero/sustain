@@ -21,6 +21,7 @@ typedef struct {
 
 	GLShader primitive_shader;
 	GLShader grid_shader;
+	GLShader gizmo_shader;
 	GLShader sky_shader;
 	GLShader blit_shader;
 
@@ -39,6 +40,9 @@ typedef struct {
 	GLint grid_inv_vp_loc;
 	GLint grid_vp_loc;
 	GLint grid_cam_pos_loc;
+	GLint gizmo_inv_vp_loc;
+	GLint gizmo_vp_loc;
+	GLint gizmo_cam_pos_loc;
 	GLint sky_inv_vp_loc;
 	GLint sky_cam_pos_loc;
 	GLint sky_sun_dir_loc;

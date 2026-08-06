@@ -10,6 +10,8 @@ set(SHADERS
     "shader_primitive_frag:primitive.frag"
     "shader_grid_vert:grid.vert"
     "shader_grid_frag:grid.frag"
+    "shader_gizmo_vert:gizmo.vert"
+    "shader_gizmo_frag:gizmo.frag"
     "shader_sky_vert:sky.vert"
     "shader_sky_frag:sky.frag"
     "shader_blit_vert:blit.vert"

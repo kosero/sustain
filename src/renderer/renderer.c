@@ -90,9 +90,6 @@ static void renderer_blit_quad(RendererContext *rctx, Rect dst, int screen_w,
 	float w = (2.0f * dst.w) / (float)screen_w;
 	float h = (2.0f * dst.h) / (float)screen_h;
 
-	// two triangles; v=0 maps to the rect's bottom vertex. The FBO
-	// texture's v=0 is the scene's bottom row, so this renders the image
-	// upright.
 	float verts[6][4] = {
 	    {x, y, 0.0f, 0.0f},	    {x + w, y, 1.0f, 0.0f},
 	    {x, y + h, 0.0f, 1.0f}, {x, y + h, 0.0f, 1.0f},
@@ -141,6 +138,8 @@ void renderer_context_init(struct CoreContext *ctx)
 	    gl_shader_create(shader_primitive_vert, shader_primitive_frag);
 	rctx->grid_shader =
 	    gl_shader_create(shader_grid_vert, shader_grid_frag);
+	rctx->gizmo_shader =
+	    gl_shader_create(shader_gizmo_vert, shader_gizmo_frag);
 	rctx->sky_shader = gl_shader_create(shader_sky_vert, shader_sky_frag);
 	rctx->blit_shader =
 	    gl_shader_create(shader_blit_vert, shader_blit_frag);
@@ -160,6 +159,12 @@ void renderer_context_init(struct CoreContext *ctx)
 	rctx->grid_vp_loc = gl_shader_location(rctx->grid_shader, "uViewProj");
 	rctx->grid_cam_pos_loc =
 	    gl_shader_location(rctx->grid_shader, "uCamPos");
+	rctx->gizmo_inv_vp_loc =
+	    gl_shader_location(rctx->gizmo_shader, "uInvViewProj");
+	rctx->gizmo_vp_loc =
+	    gl_shader_location(rctx->gizmo_shader, "uViewProj");
+	rctx->gizmo_cam_pos_loc =
+	    gl_shader_location(rctx->gizmo_shader, "uCamPos");
 	rctx->sky_inv_vp_loc =
 	    gl_shader_location(rctx->sky_shader, "uInvViewProj");
 	rctx->sky_cam_pos_loc = gl_shader_location(rctx->sky_shader, "uCamPos");
@@ -261,6 +266,24 @@ static void renderer_draw_grid(RendererContext *rctx, mat4s vp, mat4s inv_vp,
 	glDepthMask(GL_TRUE);
 }
 
+static void renderer_draw_gizmo(RendererContext *rctx, mat4s vp, mat4s inv_vp,
+				vec3s cam_pos)
+{
+	glUseProgram(rctx->gizmo_shader.id);
+	glUniformMatrix4fv(rctx->gizmo_inv_vp_loc, 1, GL_FALSE,
+			   &inv_vp.raw[0][0]);
+	glUniformMatrix4fv(rctx->gizmo_vp_loc, 1, GL_FALSE, &vp.raw[0][0]);
+	glUniform3f(rctx->gizmo_cam_pos_loc, cam_pos.raw[0], cam_pos.raw[1],
+		    cam_pos.raw[2]);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBindVertexArray(rctx->grid_vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisable(GL_BLEND);
+	glDepthMask(GL_TRUE);
+}
+
 static void renderer_draw_primitives_pass(RendererContext *rctx,
 					  ecs_world_t *world, bool transparent)
 {
@@ -334,6 +357,7 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 	renderer_draw_sky(rctx, inv_vp, camera->position, light_world);
 	renderer_draw_primitives(rctx, view, proj, light_world, world);
 	renderer_draw_grid(rctx, vp, inv_vp, camera->position);
+	renderer_draw_gizmo(rctx, vp, inv_vp, camera->position);
 
 	glBindVertexArray(0);
 	glDisable(GL_CULL_FACE);
@@ -380,6 +404,7 @@ void renderer_context_cleanup(RendererContext *rctx)
 
 	gl_shader_destroy(&rctx->primitive_shader);
 	gl_shader_destroy(&rctx->grid_shader);
+	gl_shader_destroy(&rctx->gizmo_shader);
 	gl_shader_destroy(&rctx->sky_shader);
 	gl_shader_destroy(&rctx->blit_shader);
 
