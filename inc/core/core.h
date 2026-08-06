@@ -4,6 +4,7 @@
 #include "renderer/editor_camera.h"
 #include "renderer/renderer.h"
 #include <flecs.h>
+#include <stdint.h>
 struct nk_context;
 struct SDL_Window;
 
@@ -14,6 +15,8 @@ typedef struct CoreContext {
 	ecs_entity_t selected_entity;
 	RendererContext renderer;
 	EditorCamera editor_camera;
+	double run_time_seconds;
+	uint64_t frame_count;
 } CoreContext;
 
 CoreContext *get_core_context(void);

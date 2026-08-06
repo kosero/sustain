@@ -1,5 +1,6 @@
 #include "gui/panel_hierarchy.h"
 #include "core/core.h"
+#include "core/log.h"
 #include "ecs/components.h"
 #include "flecs.h"
 #include "flecs/private/api_defines.h"
@@ -56,8 +57,14 @@ static void handle_node_selection(CoreContext *ctx, ecs_entity_t entity,
 {
 	if (is_selected && !was_selected) {
 		ctx->selected_entity = entity;
+		log_printf(LOG_LEVEL_INFO, "selected '%s' (id %llu)",
+			   node_name(ctx->world, entity),
+			   (unsigned long long)entity);
 	} else if (!is_selected && was_selected) {
 		ctx->selected_entity = 0;
+		log_printf(LOG_LEVEL_INFO, "deselected '%s' (id %llu)",
+			   node_name(ctx->world, entity),
+			   (unsigned long long)entity);
 	}
 }
 

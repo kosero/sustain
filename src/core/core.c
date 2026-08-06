@@ -2,6 +2,8 @@
 
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3/SDL_version.h"
+#include "SDL3/SDL_video.h"
 #include "core/config.h"
 #include "core/input.h"
 #include "core/log.h"
@@ -76,6 +78,7 @@ int core_context_init(void)
 		log_printf(LOG_LEVEL_ERROR, "ecs init failed");
 		return -1;
 	}
+	log_printf(LOG_LEVEL_INFO, "ecs world created");
 	components_register(ctx->world);
 
 	ctx->selected_entity = 0;
@@ -86,6 +89,7 @@ int core_context_init(void)
 
 	renderer_context_init(ctx);
 	editor_camera_init(&ctx->editor_camera);
+	log_printf(LOG_LEVEL_INFO, "core context ready");
 	return 0;
 }
 
@@ -120,6 +124,16 @@ static int core_init_window(void)
 		return core_init_fatal("SDL_Init failed");
 	}
 
+	int sdl_version = SDL_GetVersion();
+	log_printf(LOG_LEVEL_INFO, "SDL %d.%d.%d initialized",
+		   SDL_VERSIONNUM_MAJOR(sdl_version),
+		   SDL_VERSIONNUM_MINOR(sdl_version),
+		   SDL_VERSIONNUM_MICRO(sdl_version));
+
+	const char *video_driver = SDL_GetCurrentVideoDriver();
+	log_printf(LOG_LEVEL_INFO, "video driver: %s",
+		   video_driver != NULL ? video_driver : "unknown");
+
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
@@ -136,6 +150,8 @@ static int core_init_window(void)
 	if (*window_ptr == NULL) {
 		return core_init_fatal("SDL_CreateWindow failed");
 	}
+	log_printf(LOG_LEVEL_INFO, "window created: %dx%d '%s'", window->width,
+		   window->height, window->title);
 
 	*gl_context_ptr = SDL_GL_CreateContext(*window_ptr);
 	if (*gl_context_ptr == NULL) {
@@ -145,6 +161,8 @@ static int core_init_window(void)
 	if (!SDL_GL_SetSwapInterval(1)) {
 		log_printf(LOG_LEVEL_WARN, "vsync unavailable: %s",
 			   SDL_GetError());
+	} else {
+		log_printf(LOG_LEVEL_INFO, "vsync enabled");
 	}
 
 	if (gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress) == 0) {
@@ -153,21 +171,34 @@ static int core_init_window(void)
 		return -1;
 	}
 
-	log_printf(LOG_LEVEL_INFO, "window initialized");
+	log_printf(LOG_LEVEL_INFO, "opengl: %s | %s", glGetString(GL_RENDERER),
+		   glGetString(GL_VERSION));
+	log_printf(LOG_LEVEL_INFO, "glsl: %s",
+		   glGetString(GL_SHADING_LANGUAGE_VERSION));
 	return 0;
 }
 
 static void core_close_window(CoreContext *ctx)
 {
+	log_printf(LOG_LEVEL_INFO,
+		   "shutdown: %llu frames in %.2fs (avg %.1f fps)",
+		   (unsigned long long)ctx->frame_count, ctx->run_time_seconds,
+		   ctx->run_time_seconds > 0.0
+		       ? (double)ctx->frame_count / ctx->run_time_seconds
+		       : 0.0);
+
 	if (ctx->hierarchy_query) {
 		ecs_query_fini(ctx->hierarchy_query);
 	}
+	log_printf(LOG_LEVEL_DEBUG, "renderer cleanup");
 	renderer_context_cleanup(&ctx->renderer);
+	log_printf(LOG_LEVEL_DEBUG, "ecs cleanup");
 	ecs_fini(ctx->world);
+	log_printf(LOG_LEVEL_DEBUG, "nuklear cleanup");
 	nuklear_shutdown(ctx->nk_ctx);
 
 	core_sdl_cleanup();
-	log_printf(LOG_LEVEL_INFO, "window closed");
+	log_printf(LOG_LEVEL_INFO, "shutdown complete");
 }
 
 static ecs_entity_t create_primitive(CoreContext *ctx, const char *name,
@@ -186,6 +217,8 @@ static ecs_entity_t create_primitive(CoreContext *ctx, const char *name,
 		 .rotation = {{0.0f, 0.0f, 0.0f}},
 		 .scale = scale});
 	ecs_set(ctx->world, e, MeshRenderer, {.type = type, .color = color});
+	log_printf(LOG_LEVEL_INFO, "created '%s' (%s)", name,
+		   type == PRIMITIVE_CUBE ? "cube" : "sphere");
 	return e;
 }
 
@@ -202,6 +235,9 @@ static void core_load_content(CoreContext *ctx)
 	create_primitive(
 	    ctx, "Child Cube", PRIMITIVE_CUBE, (Color){80, 220, 140, 255},
 	    (vec3s){{0.0f, 2.0f, 0.0f}}, (vec3s){{0.5f, 0.5f, 0.5f}}, cube);
+
+	log_printf(LOG_LEVEL_INFO, "scene loaded: %d game objects",
+		   ecs_count(ctx->world, GameObject));
 }
 
 static void core_loop_update(CoreContext *ctx)
@@ -210,6 +246,8 @@ static void core_loop_update(CoreContext *ctx)
 		WindowProperty *w = get_window_property();
 		w->width = input_window_width();
 		w->height = input_window_height();
+		log_printf(LOG_LEVEL_DEBUG, "window resized to %dx%d", w->width,
+			   w->height);
 	}
 
 	ecs_progress(ctx->world, *get_delta_time_ptr_internal());
@@ -236,6 +274,9 @@ static void core_loop_render(CoreContext *ctx)
 
 static void core_loop(CoreContext *ctx)
 {
+	Uint64 start_ticks = SDL_GetPerformanceCounter();
+	Uint64 frame_count = 0;
+
 	while (!input_quit_requested()) {
 		core_update_delta_time();
 		input_frame_begin();
@@ -253,7 +294,13 @@ static void core_loop(CoreContext *ctx)
 		core_loop_render(ctx);
 
 		SDL_GL_SwapWindow(*get_window_ptr_internal());
+		frame_count++;
 	}
+
+	Uint64 end_ticks = SDL_GetPerformanceCounter();
+	ctx->frame_count = frame_count;
+	ctx->run_time_seconds = (double)(end_ticks - start_ticks) /
+				(double)SDL_GetPerformanceFrequency();
 }
 
 int core_run(void)

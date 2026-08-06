@@ -183,6 +183,10 @@ void renderer_context_init(struct CoreContext *ctx)
 	rctx->viewport_height = RENDERER_DEFAULT_HEIGHT;
 	rctx->viewport_initialized = true;
 	renderer_create_framebuffer(rctx);
+	log_printf(LOG_LEVEL_DEBUG,
+		   "viewport framebuffer created: %dx%d (color %u, depth %u)",
+		   rctx->viewport_width, rctx->viewport_height,
+		   rctx->viewport_color_tex, rctx->viewport_depth_rbo);
 
 	rctx->render_query = ecs_query(
 	    ctx->world,
@@ -210,6 +214,7 @@ void renderer_viewport_resize(RendererContext *rctx, int width, int height)
 	rctx->viewport_height = height;
 	rctx->viewport_initialized = true;
 	renderer_create_framebuffer(rctx);
+	log_printf(LOG_LEVEL_DEBUG, "viewport resized to %dx%d", width, height);
 }
 
 static mat4s renderer_model_from_transform(const Transform3D *t)
