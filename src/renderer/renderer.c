@@ -15,10 +15,7 @@ enum {
 	RENDERER_DEFAULT_HEIGHT = 480,
 	RENDERER_SPHERE_RINGS = 16,
 	RENDERER_SPHERE_SECTORS = 16,
-	RENDERER_GRID_HALF_SIZE = 10,
 };
-
-#define RENDERER_GRID_SPACING 1.0f
 
 static void renderer_create_framebuffer(RendererContext *rctx)
 {
@@ -105,6 +102,26 @@ static void renderer_blit_quad(RendererContext *rctx, Rect dst, int screen_w,
 	glBindVertexArray(0);
 }
 
+static void renderer_create_grid_geometry(RendererContext *rctx)
+{
+	float verts[6][2] = {
+	    {-1.0f, -1.0f}, {1.0f, -1.0f}, {-1.0f, 1.0f},
+	    {-1.0f, 1.0f},  {1.0f, -1.0f}, {1.0f, 1.0f},
+	};
+
+	glGenVertexArrays(1, &rctx->grid_vao);
+	glGenBuffers(1, &rctx->grid_vbo);
+
+	glBindVertexArray(rctx->grid_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, rctx->grid_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts[0][0],
+		     GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * (GLsizei)sizeof(float),
+			       NULL);
+	glBindVertexArray(0);
+}
+
 static vec4s renderer_color_to_vec4s(Color color)
 {
 	return (vec4s){{(float)color.r / 255.0f, (float)color.g / 255.0f,
@@ -132,8 +149,10 @@ void renderer_context_init(struct CoreContext *ctx)
 	    gl_shader_location(rctx->primitive_shader, "uColor");
 	rctx->prim_light_loc =
 	    gl_shader_location(rctx->primitive_shader, "uLightDir");
-	rctx->grid_view_loc = gl_shader_location(rctx->grid_shader, "uView");
-	rctx->grid_proj_loc = gl_shader_location(rctx->grid_shader, "uProj");
+	rctx->grid_inv_vp_loc =
+	    gl_shader_location(rctx->grid_shader, "uInvViewProj");
+	rctx->grid_cam_pos_loc =
+	    gl_shader_location(rctx->grid_shader, "uCamPos");
 	rctx->blit_tex_loc = gl_shader_location(rctx->blit_shader, "uTexture");
 
 	gl_mesh_build_cube(&rctx->cube_mesh);
@@ -141,11 +160,8 @@ void renderer_context_init(struct CoreContext *ctx)
 				 RENDERER_SPHERE_SECTORS) != 0) {
 		log_printf(LOG_LEVEL_ERROR, "sphere mesh allocation failed");
 	}
-	if (gl_mesh_build_grid(&rctx->grid_mesh, RENDERER_GRID_HALF_SIZE,
-			       RENDERER_GRID_SPACING) != 0) {
-		log_printf(LOG_LEVEL_ERROR, "grid mesh allocation failed");
-	}
 	renderer_create_blit_geometry(rctx);
+	renderer_create_grid_geometry(rctx);
 
 	rctx->viewport_width = RENDERER_DEFAULT_WIDTH;
 	rctx->viewport_height = RENDERER_DEFAULT_HEIGHT;
@@ -198,11 +214,16 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 				      camera->znear, camera->zfar);
 
 	glUseProgram(rctx->grid_shader.id);
-	glUniformMatrix4fv(rctx->grid_view_loc, 1, GL_FALSE, &view.raw[0][0]);
-	glUniformMatrix4fv(rctx->grid_proj_loc, 1, GL_FALSE, &proj.raw[0][0]);
-	glBindVertexArray(rctx->grid_mesh.vao);
-	glDrawElements(GL_LINES, rctx->grid_mesh.index_count, GL_UNSIGNED_INT,
-		       NULL);
+	mat4s vp = glms_mat4_mul(proj, view);
+	mat4s inv_vp = glms_mat4_inv(vp);
+	glUniformMatrix4fv(rctx->grid_inv_vp_loc, 1, GL_FALSE,
+			   &inv_vp.raw[0][0]);
+	glUniform3f(rctx->grid_cam_pos_loc, camera->position.raw[0],
+		    camera->position.raw[1], camera->position.raw[2]);
+	glDepthFunc(GL_LEQUAL);
+	glBindVertexArray(rctx->grid_vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDepthFunc(GL_LESS);
 
 	glUseProgram(rctx->primitive_shader.id);
 	glUniformMatrix4fv(rctx->prim_view_loc, 1, GL_FALSE, &view.raw[0][0]);
@@ -296,12 +317,16 @@ void renderer_context_cleanup(RendererContext *rctx)
 	gl_mesh_destroy(&rctx->cube_mesh);
 	gl_mesh_destroy(&rctx->cube_wire_mesh);
 	gl_mesh_destroy(&rctx->sphere_mesh);
-	gl_mesh_destroy(&rctx->grid_mesh);
 
 	glDeleteVertexArrays(1, &rctx->blit_vao);
 	glDeleteBuffers(1, &rctx->blit_vbo);
 	rctx->blit_vao = 0;
 	rctx->blit_vbo = 0;
+
+	glDeleteVertexArrays(1, &rctx->grid_vao);
+	glDeleteBuffers(1, &rctx->grid_vbo);
+	rctx->grid_vao = 0;
+	rctx->grid_vbo = 0;
 
 	gl_shader_destroy(&rctx->primitive_shader);
 	gl_shader_destroy(&rctx->grid_shader);

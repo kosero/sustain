@@ -6,8 +6,11 @@ uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
 out vec3 vNormal;
+out vec3 vViewPos;
 
 void main() {
-  gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0);
+  vec4 viewPos = uView * uModel * vec4(aPosition, 1.0);
+  gl_Position = uProj * viewPos;
   vNormal = mat3(uView * uModel) * aNormal;
+  vViewPos = viewPos.xyz;
 }

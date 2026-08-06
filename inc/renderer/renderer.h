@@ -26,17 +26,18 @@ typedef struct {
 	GLMesh cube_mesh;
 	GLMesh cube_wire_mesh;
 	GLMesh sphere_mesh;
-	GLMesh grid_mesh;
 
 	GLuint blit_vao;
 	GLuint blit_vbo;
+	GLuint grid_vao;
+	GLuint grid_vbo;
 	GLint prim_model_loc;
 	GLint prim_view_loc;
 	GLint prim_proj_loc;
 	GLint prim_color_loc;
 	GLint prim_light_loc;
-	GLint grid_view_loc;
-	GLint grid_proj_loc;
+	GLint grid_inv_vp_loc;
+	GLint grid_cam_pos_loc;
 	GLint blit_tex_loc;
 } RendererContext;
 
