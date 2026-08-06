@@ -58,6 +58,10 @@ jobs:
             clang-tidy            \
             libgl1-mesa-dev       \
             libglu1-mesa-dev      \
+            libegl1-mesa-dev      \
+            libwayland-dev        \
+            libxkbcommon-dev      \
+            libdecor-0-dev        \
             libx11-dev            \
             libxrandr-dev         \
             libxinerama-dev       \
