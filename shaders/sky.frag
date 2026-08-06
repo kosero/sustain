@@ -1,4 +1,4 @@
-#version 460 core
+#version 410 core
 
 uniform mat4 uInvViewProj;
 uniform vec3 uCamPos;

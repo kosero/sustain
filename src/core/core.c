@@ -134,8 +134,6 @@ static int core_init_window(void)
 	log_printf(LOG_LEVEL_INFO, "video driver: %s",
 		   video_driver != NULL ? video_driver : "unknown");
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
 			    SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -153,7 +151,25 @@ static int core_init_window(void)
 	log_printf(LOG_LEVEL_INFO, "window created: %dx%d '%s'", window->width,
 		   window->height, window->title);
 
-	*gl_context_ptr = SDL_GL_CreateContext(*window_ptr);
+	const int gl_versions[][2] = {{4, 6}, {4, 1}};
+	for (size_t i = 0; i < sizeof(gl_versions) / sizeof(gl_versions[0]);
+	     i++) {
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,
+				    gl_versions[i][0]);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,
+				    gl_versions[i][1]);
+		*gl_context_ptr = SDL_GL_CreateContext(*window_ptr);
+		if (*gl_context_ptr != NULL) {
+			break;
+		}
+		if (i + 1 < sizeof(gl_versions) / sizeof(gl_versions[0])) {
+			log_printf(LOG_LEVEL_WARN,
+				   "GL %d.%d context failed, trying %d.%d: %s",
+				   gl_versions[i][0], gl_versions[i][1],
+				   gl_versions[i + 1][0], gl_versions[i + 1][1],
+				   SDL_GetError());
+		}
+	}
 	if (*gl_context_ptr == NULL) {
 		return core_init_fatal("SDL_GL_CreateContext failed");
 	}

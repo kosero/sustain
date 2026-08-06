@@ -1,4 +1,4 @@
-#version 460 core
+#version 410 core
 
 uniform mat4 ProjMtx;
 layout(location = 0) in vec2 Position;

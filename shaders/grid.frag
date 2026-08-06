@@ -1,4 +1,4 @@
-#version 460 core
+#version 410 core
 
 uniform mat4 uInvViewProj;
 uniform mat4 uViewProj;
