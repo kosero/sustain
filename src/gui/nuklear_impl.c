@@ -347,8 +347,7 @@ void nuklear_render(struct nk_context *ctx, int width, int height)
 	struct nk_convert_config config = {0};
 	config.vertex_layout = vertex_layout;
 	config.vertex_size = sizeof(struct nk_gl_vertex);
-	config.vertex_alignment =
-	    offsetof(struct nk_gl_vertex_align_probe, v);
+	config.vertex_alignment = offsetof(struct nk_gl_vertex_align_probe, v);
 	config.tex_null = dev->tex_null;
 	config.circle_segment_count = 22;
 	config.curve_segment_count = 22;

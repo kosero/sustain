@@ -17,6 +17,11 @@ enum {
 	RENDERER_SPHERE_SECTORS = 16,
 };
 
+static const vec3s renderer_light_dir = {{0.5f, 1.0f, 0.6f}};
+
+static const vec4s renderer_clear_color = {
+    {30.0f / 255.0f, 30.0f / 255.0f, 35.0f / 255.0f, 1.0f}};
+
 static void renderer_create_framebuffer(RendererContext *rctx)
 {
 	glGenFramebuffers(1, &rctx->viewport_fbo);
@@ -117,8 +122,8 @@ static void renderer_create_grid_geometry(RendererContext *rctx)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts[0][0],
 		     GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * (GLsizei)sizeof(float),
-			       NULL);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+			      2 * (GLsizei)sizeof(float), NULL);
 	glBindVertexArray(0);
 }
 
@@ -136,8 +141,7 @@ void renderer_context_init(struct CoreContext *ctx)
 	    gl_shader_create(shader_primitive_vert, shader_primitive_frag);
 	rctx->grid_shader =
 	    gl_shader_create(shader_grid_vert, shader_grid_frag);
-	rctx->sky_shader =
-	    gl_shader_create(shader_sky_vert, shader_sky_frag);
+	rctx->sky_shader = gl_shader_create(shader_sky_vert, shader_sky_frag);
 	rctx->blit_shader =
 	    gl_shader_create(shader_blit_vert, shader_blit_frag);
 
@@ -158,10 +162,8 @@ void renderer_context_init(struct CoreContext *ctx)
 	    gl_shader_location(rctx->grid_shader, "uCamPos");
 	rctx->sky_inv_vp_loc =
 	    gl_shader_location(rctx->sky_shader, "uInvViewProj");
-	rctx->sky_cam_pos_loc =
-	    gl_shader_location(rctx->sky_shader, "uCamPos");
-	rctx->sky_sun_dir_loc =
-	    gl_shader_location(rctx->sky_shader, "uSunDir");
+	rctx->sky_cam_pos_loc = gl_shader_location(rctx->sky_shader, "uCamPos");
+	rctx->sky_sun_dir_loc = gl_shader_location(rctx->sky_shader, "uSunDir");
 	rctx->blit_tex_loc = gl_shader_location(rctx->blit_shader, "uTexture");
 
 	gl_mesh_build_cube(&rctx->cube_mesh);
@@ -205,12 +207,117 @@ void renderer_viewport_resize(RendererContext *rctx, int width, int height)
 	renderer_create_framebuffer(rctx);
 }
 
+static mat4s renderer_model_from_transform(const Transform3D *t)
+{
+	mat4s model = glms_mat4_identity();
+	model = glms_translate(model, t->position);
+	model = glms_rotate_y(model, glm_rad(t->rotation.raw[1]));
+	model = glms_rotate_x(model, glm_rad(t->rotation.raw[0]));
+	model = glms_rotate_z(model, glm_rad(t->rotation.raw[2]));
+	return glms_scale(model, t->scale);
+}
+
+static void renderer_draw_mesh(RendererContext *rctx, const GLMesh *mesh,
+			       mat4s model, vec4s color)
+{
+	glUniformMatrix4fv(rctx->prim_model_loc, 1, GL_FALSE,
+			   &model.raw[0][0]);
+	glUniform4f(rctx->prim_color_loc, color.raw[0], color.raw[1],
+		    color.raw[2], color.raw[3]);
+	glBindVertexArray(mesh->vao);
+	glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, NULL);
+}
+
+static void renderer_draw_sky(RendererContext *rctx, mat4s inv_vp,
+			      vec3s cam_pos, vec3s sun_dir)
+{
+	glDisable(GL_DEPTH_TEST);
+	glUseProgram(rctx->sky_shader.id);
+	glUniformMatrix4fv(rctx->sky_inv_vp_loc, 1, GL_FALSE,
+			   &inv_vp.raw[0][0]);
+	glUniform3f(rctx->sky_cam_pos_loc, cam_pos.raw[0], cam_pos.raw[1],
+		    cam_pos.raw[2]);
+	glUniform3f(rctx->sky_sun_dir_loc, sun_dir.raw[0], sun_dir.raw[1],
+		    sun_dir.raw[2]);
+	glBindVertexArray(rctx->grid_vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glEnable(GL_DEPTH_TEST);
+}
+
+static void renderer_draw_grid(RendererContext *rctx, mat4s vp, mat4s inv_vp,
+			       vec3s cam_pos)
+{
+	glUseProgram(rctx->grid_shader.id);
+	glUniformMatrix4fv(rctx->grid_inv_vp_loc, 1, GL_FALSE,
+			   &inv_vp.raw[0][0]);
+	glUniformMatrix4fv(rctx->grid_vp_loc, 1, GL_FALSE, &vp.raw[0][0]);
+	glUniform3f(rctx->grid_cam_pos_loc, cam_pos.raw[0], cam_pos.raw[1],
+		    cam_pos.raw[2]);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBindVertexArray(rctx->grid_vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisable(GL_BLEND);
+	glDepthMask(GL_TRUE);
+}
+
+static void renderer_draw_primitives_pass(RendererContext *rctx,
+					  ecs_world_t *world, bool transparent)
+{
+	ecs_iter_t it = ecs_query_iter(world, rctx->render_query);
+	while (ecs_query_next(&it)) {
+		Transform3D *t = ecs_field(&it, Transform3D, 0);
+		MeshRenderer *m = ecs_field(&it, MeshRenderer, 1);
+
+		for (int i = 0; i < it.count; i++) {
+			if (transparent) {
+				if (m[i].color.a == 255) {
+					continue;
+				}
+			} else if (m[i].color.a != 255) {
+				continue;
+			}
+			mat4s model = renderer_model_from_transform(&t[i]);
+			vec4s color = renderer_color_to_vec4s(m[i].color);
+			const GLMesh *mesh =
+			    m[i].type == PRIMITIVE_CUBE ? &rctx->cube_mesh
+							: &rctx->sphere_mesh;
+			renderer_draw_mesh(rctx, mesh, model, color);
+		}
+	}
+}
+
+static void renderer_draw_primitives(RendererContext *rctx, mat4s view,
+				     mat4s proj, vec3s light_world,
+				     ecs_world_t *world)
+{
+	glUseProgram(rctx->primitive_shader.id);
+	glUniformMatrix4fv(rctx->prim_view_loc, 1, GL_FALSE, &view.raw[0][0]);
+	glUniformMatrix4fv(rctx->prim_proj_loc, 1, GL_FALSE, &proj.raw[0][0]);
+
+	vec3s light_view =
+	    glms_vec3_normalize(glms_mat4_mulv3(view, light_world, 0.0f));
+	glUniform3f(rctx->prim_light_loc, light_view.raw[0], light_view.raw[1],
+		    light_view.raw[2]);
+
+	renderer_draw_primitives_pass(rctx, world, false);
+
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	renderer_draw_primitives_pass(rctx, world, true);
+	glDisable(GL_BLEND);
+	glDepthMask(GL_TRUE);
+}
+
 void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 			    ecs_world_t *world)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, rctx->viewport_fbo);
 	glViewport(0, 0, rctx->viewport_width, rctx->viewport_height);
-	glClearColor(30.0f / 255.0f, 30.0f / 255.0f, 35.0f / 255.0f, 1.0f);
+	glClearColor(renderer_clear_color.raw[0], renderer_clear_color.raw[1],
+		     renderer_clear_color.raw[2], renderer_clear_color.raw[3]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -223,91 +330,11 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 				      camera->znear, camera->zfar);
 	mat4s vp = glms_mat4_mul(proj, view);
 	mat4s inv_vp = glms_mat4_inv(vp);
-	vec3s light_world = glms_vec3_normalize((vec3s){{0.5f, 1.0f, 0.6f}});
+	vec3s light_world = glms_vec3_normalize(renderer_light_dir);
 
-	glDisable(GL_DEPTH_TEST);
-	glUseProgram(rctx->sky_shader.id);
-	glUniformMatrix4fv(rctx->sky_inv_vp_loc, 1, GL_FALSE,
-			   &inv_vp.raw[0][0]);
-	glUniform3f(rctx->sky_cam_pos_loc, camera->position.raw[0],
-		    camera->position.raw[1], camera->position.raw[2]);
-	glUniform3f(rctx->sky_sun_dir_loc, light_world.raw[0],
-		    light_world.raw[1], light_world.raw[2]);
-	glBindVertexArray(rctx->grid_vao);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glEnable(GL_DEPTH_TEST);
-
-	glUseProgram(rctx->primitive_shader.id);
-	glUniformMatrix4fv(rctx->prim_view_loc, 1, GL_FALSE, &view.raw[0][0]);
-	glUniformMatrix4fv(rctx->prim_proj_loc, 1, GL_FALSE, &proj.raw[0][0]);
-
-	vec3s light_view =
-	    glms_vec3_normalize(glms_mat4_mulv3(view, light_world, 0.0f));
-	glUniform3f(rctx->prim_light_loc, light_view.raw[0],
-		    light_view.raw[1], light_view.raw[2]);
-
-	ecs_iter_t it = ecs_query_iter(world, rctx->render_query);
-	while (ecs_query_next(&it)) {
-		Transform3D *t = ecs_field(&it, Transform3D, 0);
-		MeshRenderer *m = ecs_field(&it, MeshRenderer, 1);
-
-		for (int i = 0; i < it.count; i++) {
-			mat4s model = glms_mat4_identity();
-			model = glms_translate(model, t[i].position);
-			model = glms_rotate_y(model,
-					       glm_rad(t[i].rotation.raw[1]));
-			model = glms_rotate_x(model,
-					       glm_rad(t[i].rotation.raw[0]));
-			model = glms_rotate_z(model,
-					       glm_rad(t[i].rotation.raw[2]));
-			model = glms_scale(model, t[i].scale);
-
-			vec4s color = renderer_color_to_vec4s(m[i].color);
-
-			if (m[i].type == PRIMITIVE_CUBE) {
-				glUniformMatrix4fv(rctx->prim_model_loc, 1,
-						   GL_FALSE, &model.raw[0][0]);
-				glUniform4f(rctx->prim_color_loc, color.raw[0],
-					    color.raw[1], color.raw[2],
-					    color.raw[3]);
-				glBindVertexArray(rctx->cube_mesh.vao);
-				glDrawElements(GL_TRIANGLES,
-					       rctx->cube_mesh.index_count,
-					       GL_UNSIGNED_INT, NULL);
-
-				glUniform4f(rctx->prim_color_loc, 0.0f, 0.0f,
-					    0.0f, 1.0f);
-				glBindVertexArray(rctx->cube_wire_mesh.vao);
-				glDrawElements(GL_LINES,
-					       rctx->cube_wire_mesh.index_count,
-					       GL_UNSIGNED_INT, NULL);
-			} else if (m[i].type == PRIMITIVE_SPHERE) {
-				glUniformMatrix4fv(rctx->prim_model_loc, 1,
-						   GL_FALSE, &model.raw[0][0]);
-				glUniform4f(rctx->prim_color_loc, color.raw[0],
-					    color.raw[1], color.raw[2],
-					    color.raw[3]);
-				glBindVertexArray(rctx->sphere_mesh.vao);
-				glDrawElements(GL_TRIANGLES,
-					       rctx->sphere_mesh.index_count,
-					       GL_UNSIGNED_INT, NULL);
-			}
-		}
-	}
-
-	glUseProgram(rctx->grid_shader.id);
-	glUniformMatrix4fv(rctx->grid_inv_vp_loc, 1, GL_FALSE,
-			   &inv_vp.raw[0][0]);
-	glUniformMatrix4fv(rctx->grid_vp_loc, 1, GL_FALSE, &vp.raw[0][0]);
-	glUniform3f(rctx->grid_cam_pos_loc, camera->position.raw[0],
-		    camera->position.raw[1], camera->position.raw[2]);
-	glDepthMask(GL_FALSE);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBindVertexArray(rctx->grid_vao);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDisable(GL_BLEND);
-	glDepthMask(GL_TRUE);
+	renderer_draw_sky(rctx, inv_vp, camera->position, light_world);
+	renderer_draw_primitives(rctx, view, proj, light_world, world);
+	renderer_draw_grid(rctx, vp, inv_vp, camera->position);
 
 	glBindVertexArray(0);
 	glDisable(GL_CULL_FACE);
@@ -340,7 +367,6 @@ void renderer_context_cleanup(RendererContext *rctx)
 	}
 
 	gl_mesh_destroy(&rctx->cube_mesh);
-	gl_mesh_destroy(&rctx->cube_wire_mesh);
 	gl_mesh_destroy(&rctx->sphere_mesh);
 
 	glDeleteVertexArrays(1, &rctx->blit_vao);

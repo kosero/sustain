@@ -25,7 +25,6 @@ typedef struct {
 	GLShader blit_shader;
 
 	GLMesh cube_mesh;
-	GLMesh cube_wire_mesh;
 	GLMesh sphere_mesh;
 
 	GLuint blit_vao;
