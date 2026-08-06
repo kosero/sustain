@@ -1,6 +1,7 @@
 #version 460 core
 
 uniform mat4 uInvViewProj;
+uniform mat4 uViewProj;
 uniform vec3 uCamPos;
 in vec2 vUv;
 out vec4 outColor;
@@ -27,10 +28,15 @@ void main() {
   float axisX = 1.0 - min(abs(pos.x) / fwidth(pos.x), 1.0);
   float axisZ = 1.0 - min(abs(pos.y) / fwidth(pos.y), 1.0);
 
-  vec3 col = vec3(0.28, 0.30, 0.36) * gridIntensity;
+  vec3 col = vec3(0.68, 0.69, 0.72) * gridIntensity;
   col += vec3(0.75, 0.22, 0.22) * axisX * 0.7;
   col += vec3(0.20, 0.42, 0.85) * axisZ * 0.7;
-  col *= fade;
 
-  outColor = vec4(col, 1.0);
+  float intensity = max(gridIntensity, max(axisX, axisZ));
+  intensity *= fade;
+
+  vec4 clip = uViewProj * vec4(worldPos, 1.0);
+  gl_FragDepth = (clip.z / clip.w) * 0.5 + 0.5;
+
+  outColor = vec4(col, intensity);
 }

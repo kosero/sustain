@@ -136,6 +136,8 @@ void renderer_context_init(struct CoreContext *ctx)
 	    gl_shader_create(shader_primitive_vert, shader_primitive_frag);
 	rctx->grid_shader =
 	    gl_shader_create(shader_grid_vert, shader_grid_frag);
+	rctx->sky_shader =
+	    gl_shader_create(shader_sky_vert, shader_sky_frag);
 	rctx->blit_shader =
 	    gl_shader_create(shader_blit_vert, shader_blit_frag);
 
@@ -151,8 +153,15 @@ void renderer_context_init(struct CoreContext *ctx)
 	    gl_shader_location(rctx->primitive_shader, "uLightDir");
 	rctx->grid_inv_vp_loc =
 	    gl_shader_location(rctx->grid_shader, "uInvViewProj");
+	rctx->grid_vp_loc = gl_shader_location(rctx->grid_shader, "uViewProj");
 	rctx->grid_cam_pos_loc =
 	    gl_shader_location(rctx->grid_shader, "uCamPos");
+	rctx->sky_inv_vp_loc =
+	    gl_shader_location(rctx->sky_shader, "uInvViewProj");
+	rctx->sky_cam_pos_loc =
+	    gl_shader_location(rctx->sky_shader, "uCamPos");
+	rctx->sky_sun_dir_loc =
+	    gl_shader_location(rctx->sky_shader, "uSunDir");
 	rctx->blit_tex_loc = gl_shader_location(rctx->blit_shader, "uTexture");
 
 	gl_mesh_build_cube(&rctx->cube_mesh);
@@ -212,24 +221,26 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 	mat4s view = glms_lookat(camera->position, camera->target, camera->up);
 	mat4s proj = glms_perspective(glm_rad(camera->fovy), aspect,
 				      camera->znear, camera->zfar);
-
-	glUseProgram(rctx->grid_shader.id);
 	mat4s vp = glms_mat4_mul(proj, view);
 	mat4s inv_vp = glms_mat4_inv(vp);
-	glUniformMatrix4fv(rctx->grid_inv_vp_loc, 1, GL_FALSE,
+	vec3s light_world = glms_vec3_normalize((vec3s){{0.5f, 1.0f, 0.6f}});
+
+	glDisable(GL_DEPTH_TEST);
+	glUseProgram(rctx->sky_shader.id);
+	glUniformMatrix4fv(rctx->sky_inv_vp_loc, 1, GL_FALSE,
 			   &inv_vp.raw[0][0]);
-	glUniform3f(rctx->grid_cam_pos_loc, camera->position.raw[0],
+	glUniform3f(rctx->sky_cam_pos_loc, camera->position.raw[0],
 		    camera->position.raw[1], camera->position.raw[2]);
-	glDepthFunc(GL_LEQUAL);
+	glUniform3f(rctx->sky_sun_dir_loc, light_world.raw[0],
+		    light_world.raw[1], light_world.raw[2]);
 	glBindVertexArray(rctx->grid_vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDepthFunc(GL_LESS);
+	glEnable(GL_DEPTH_TEST);
 
 	glUseProgram(rctx->primitive_shader.id);
 	glUniformMatrix4fv(rctx->prim_view_loc, 1, GL_FALSE, &view.raw[0][0]);
 	glUniformMatrix4fv(rctx->prim_proj_loc, 1, GL_FALSE, &proj.raw[0][0]);
 
-	vec3s light_world = glms_vec3_normalize((vec3s){{0.5f, 1.0f, 0.6f}});
 	vec3s light_view =
 	    glms_vec3_normalize(glms_mat4_mulv3(view, light_world, 0.0f));
 	glUniform3f(rctx->prim_light_loc, light_view.raw[0],
@@ -284,6 +295,20 @@ void renderer_draw_viewport(RendererContext *rctx, Camera3D *camera,
 		}
 	}
 
+	glUseProgram(rctx->grid_shader.id);
+	glUniformMatrix4fv(rctx->grid_inv_vp_loc, 1, GL_FALSE,
+			   &inv_vp.raw[0][0]);
+	glUniformMatrix4fv(rctx->grid_vp_loc, 1, GL_FALSE, &vp.raw[0][0]);
+	glUniform3f(rctx->grid_cam_pos_loc, camera->position.raw[0],
+		    camera->position.raw[1], camera->position.raw[2]);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBindVertexArray(rctx->grid_vao);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisable(GL_BLEND);
+	glDepthMask(GL_TRUE);
+
 	glBindVertexArray(0);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
@@ -330,6 +355,7 @@ void renderer_context_cleanup(RendererContext *rctx)
 
 	gl_shader_destroy(&rctx->primitive_shader);
 	gl_shader_destroy(&rctx->grid_shader);
+	gl_shader_destroy(&rctx->sky_shader);
 	gl_shader_destroy(&rctx->blit_shader);
 
 	if (rctx->viewport_initialized) {

@@ -21,6 +21,7 @@ typedef struct {
 
 	GLShader primitive_shader;
 	GLShader grid_shader;
+	GLShader sky_shader;
 	GLShader blit_shader;
 
 	GLMesh cube_mesh;
@@ -37,7 +38,11 @@ typedef struct {
 	GLint prim_color_loc;
 	GLint prim_light_loc;
 	GLint grid_inv_vp_loc;
+	GLint grid_vp_loc;
 	GLint grid_cam_pos_loc;
+	GLint sky_inv_vp_loc;
+	GLint sky_cam_pos_loc;
+	GLint sky_sun_dir_loc;
 	GLint blit_tex_loc;
 } RendererContext;
 

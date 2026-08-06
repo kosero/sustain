@@ -53,6 +53,8 @@ add_custom_command(
         ${PROJECT_SOURCE_DIR}/shaders/primitive.frag
         ${PROJECT_SOURCE_DIR}/shaders/grid.vert
         ${PROJECT_SOURCE_DIR}/shaders/grid.frag
+        ${PROJECT_SOURCE_DIR}/shaders/sky.vert
+        ${PROJECT_SOURCE_DIR}/shaders/sky.frag
         ${PROJECT_SOURCE_DIR}/shaders/blit.vert
         ${PROJECT_SOURCE_DIR}/shaders/blit.frag
         ${PROJECT_SOURCE_DIR}/shaders/ui.vert
