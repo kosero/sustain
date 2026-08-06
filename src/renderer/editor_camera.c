@@ -16,11 +16,6 @@ static vec3s editor_camera_forward(EditorCamera *cam)
 			-cosf(cam->pitch) * cosf(cam->yaw)}};
 }
 
-static vec3s editor_camera_forward_horizontal(EditorCamera *cam)
-{
-	return (vec3s){{sinf(cam->yaw), 0.0f, -cosf(cam->yaw)}};
-}
-
 static vec3s editor_camera_right(EditorCamera *cam)
 {
 	return (vec3s){{cosf(cam->yaw), 0.0f, sinf(cam->yaw)}};
@@ -68,16 +63,14 @@ void editor_camera_update(EditorCamera *cam, bool is_hovered)
 		if (input_key_down(SDL_SCANCODE_W)) {
 			cam->camera.position = glms_vec3_add(
 			    cam->camera.position,
-			    glms_vec3_scale(
-				editor_camera_forward_horizontal(cam),
-				move_speed));
+			    glms_vec3_scale(editor_camera_forward(cam),
+					    move_speed));
 		}
 		if (input_key_down(SDL_SCANCODE_S)) {
 			cam->camera.position = glms_vec3_add(
 			    cam->camera.position,
-			    glms_vec3_scale(
-				editor_camera_forward_horizontal(cam),
-				-move_speed));
+			    glms_vec3_scale(editor_camera_forward(cam),
+					    -move_speed));
 		}
 		if (input_key_down(SDL_SCANCODE_D)) {
 			cam->camera.position = glms_vec3_add(
