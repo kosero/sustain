@@ -11,7 +11,9 @@
 #include "gui/gui.h"
 #include "gui/microui_impl.h"
 
+#ifdef __linux__
 #include <dirent.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

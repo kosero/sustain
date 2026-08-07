@@ -11,6 +11,35 @@
 #define LOG_HAVE_ISATTY 1
 #endif
 
+static void log_lowercase(const char *src, char *dst, size_t dst_size)
+{
+	size_t i = 0;
+	for (; src[i] != '\0' && i + 1 < dst_size; i++) {
+		dst[i] = (char)tolower((unsigned char)src[i]);
+	}
+	dst[i] = '\0';
+}
+
+static int log_level_from_name(const char *lower)
+{
+	if (strcmp(lower, "trace") == 0) {
+		return LOG_LEVEL_TRACE;
+	}
+	if (strcmp(lower, "debug") == 0) {
+		return LOG_LEVEL_DEBUG;
+	}
+	if (strcmp(lower, "info") == 0) {
+		return LOG_LEVEL_INFO;
+	}
+	if (strcmp(lower, "warn") == 0) {
+		return LOG_LEVEL_WARN;
+	}
+	if (strcmp(lower, "error") == 0) {
+		return LOG_LEVEL_ERROR;
+	}
+	return -1;
+}
+
 static LOG_LEVEL log_get_min_level(void)
 {
 	static int initialized = 0;
@@ -21,22 +50,10 @@ static LOG_LEVEL log_get_min_level(void)
 		const char *env = getenv("SUSTAIN_LOG_LEVEL");
 		if (env != NULL && *env != '\0') {
 			char lower[16];
-			int i = 0;
-			for (; env[i] != '\0' && i < 15; i++) {
-				lower[i] = (char)tolower((unsigned char)env[i]);
-			}
-			lower[i] = '\0';
-
-			if (strcmp(lower, "trace") == 0) {
-				min_level = LOG_LEVEL_TRACE;
-			} else if (strcmp(lower, "debug") == 0) {
-				min_level = LOG_LEVEL_DEBUG;
-			} else if (strcmp(lower, "info") == 0) {
-				min_level = LOG_LEVEL_INFO;
-			} else if (strcmp(lower, "warn") == 0) {
-				min_level = LOG_LEVEL_WARN;
-			} else if (strcmp(lower, "error") == 0) {
-				min_level = LOG_LEVEL_ERROR;
+			log_lowercase(env, lower, sizeof(lower));
+			int named = log_level_from_name(lower);
+			if (named >= 0) {
+				min_level = (LOG_LEVEL)named;
 			} else {
 				char *end = NULL;
 				long value = strtol(env, &end, 10);
