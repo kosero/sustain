@@ -11,6 +11,11 @@
 #include "gui/gui.h"
 #include "gui/microui_impl.h"
 
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 static CoreContext **get_core_context_ptr_internal(void)
 {
 	static CoreContext *g_ctx = NULL;
@@ -317,11 +322,76 @@ static void core_loop(CoreContext *ctx)
 				(double)SDL_GetPerformanceFrequency();
 }
 
+static void core_restrict_egl_vendors(void)
+{
+#ifdef __linux__
+	// NOLINTNEXTLINE(concurrency-mt-unsafe)
+	const char *existing = getenv("__EGL_VENDOR_LIBRARY_FILENAMES");
+	if (existing != NULL && existing[0] != '\0') {
+		return;
+	}
+	const char *vendor_dir = "/usr/share/glvnd/egl_vendor.d";
+	// NOLINTNEXTLINE(concurrency-mt-unsafe)
+	DIR *dir = opendir(vendor_dir);
+	if (dir == NULL) {
+		return;
+	}
+
+	enum { VENDOR_MAX = 16 };
+	enum { VENDOR_PATH_MAX = 256 };
+	enum { JOINED_MAX = 4096 };
+	char paths[VENDOR_MAX][VENDOR_PATH_MAX];
+	int count = 0;
+
+	struct dirent *entry = NULL;
+	// NOLINTNEXTLINE(concurrency-mt-unsafe)
+	while ((entry = readdir(dir)) != NULL && count < VENDOR_MAX) {
+		const char *name = entry->d_name;
+		size_t name_len = strlen(name);
+		if (name_len < 6 || strcmp(&name[name_len - 5], ".json") != 0) {
+			continue;
+		}
+		if (strstr(name, "nvidia") != NULL) {
+			continue;
+		}
+		(void)snprintf(paths[count], sizeof(paths[count]), "%s/%s",
+			       vendor_dir, name);
+		count++;
+	}
+	closedir(dir);
+
+	if (count == 0) {
+		return;
+	}
+
+	char joined[JOINED_MAX];
+	size_t used = 0;
+	for (int i = 0; i < count; i++) {
+		if (i > 0) {
+			joined[used++] = ':';
+		}
+		size_t path_len = strlen(paths[i]);
+		size_t room = sizeof(joined) - used - 1;
+		if (path_len > room) {
+			path_len = room;
+		}
+		memcpy(&joined[used], paths[i], path_len);
+		used += path_len;
+	}
+	joined[used] = '\0';
+
+	// NOLINTNEXTLINE(concurrency-mt-unsafe)
+	(void)setenv("__EGL_VENDOR_LIBRARY_FILENAMES", joined, 1);
+#endif
+}
+
 int core_run(void)
 {
 	static CoreContext ctx = {0};
 	set_core_context(&ctx);
 	CoreContext *ctx_ptr = get_core_context();
+
+	core_restrict_egl_vendors();
 
 	if (core_init_window() != 0) {
 		return 1;
