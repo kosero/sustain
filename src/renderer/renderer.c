@@ -10,12 +10,16 @@
 #include <cglm/struct.h>
 #include <glad/gl.h>
 
+#include <stdlib.h>
+
 enum {
 	RENDERER_DEFAULT_WIDTH = 640,
 	RENDERER_DEFAULT_HEIGHT = 480,
 	RENDERER_SPHERE_RINGS = 16,
 	RENDERER_SPHERE_SECTORS = 16,
 };
+
+enum { TRANSPARENT_INITIAL_CAPACITY = 8 };
 
 static const vec3s renderer_light_dir = {{0.5f, 1.0f, 0.6f}};
 
@@ -289,8 +293,8 @@ static void renderer_draw_gizmo(RendererContext *rctx, mat4s vp, mat4s inv_vp,
 	glDepthMask(GL_TRUE);
 }
 
-static void renderer_draw_primitives_pass(RendererContext *rctx,
-					  ecs_world_t *world, bool transparent)
+static void renderer_draw_opaque_pass(RendererContext *rctx,
+				      ecs_world_t *world)
 {
 	ecs_iter_t it = ecs_query_iter(world, rctx->render_query);
 	while (ecs_query_next(&it)) {
@@ -298,11 +302,7 @@ static void renderer_draw_primitives_pass(RendererContext *rctx,
 		MeshRenderer *m = ecs_field(&it, MeshRenderer, 1);
 
 		for (int i = 0; i < it.count; i++) {
-			if (transparent) {
-				if (m[i].color.a == 255) {
-					continue;
-				}
-			} else if (m[i].color.a != 255) {
+			if (m[i].color.a != 255) {
 				continue;
 			}
 			mat4s model = renderer_model_from_transform(&t[i]);
@@ -313,6 +313,86 @@ static void renderer_draw_primitives_pass(RendererContext *rctx,
 			renderer_draw_mesh(rctx, mesh, model, color);
 		}
 	}
+}
+
+struct transparent_draw {
+	mat4s model;
+	vec4s color;
+	const GLMesh *mesh;
+	float depth;
+};
+
+static int transparent_draw_push(struct transparent_draw **draws,
+				 size_t *count, size_t *capacity,
+				 struct transparent_draw draw)
+{
+	if (*count == *capacity) {
+		size_t new_capacity = (*capacity == 0)
+					  ? TRANSPARENT_INITIAL_CAPACITY
+					  : (*capacity * 2);
+		struct transparent_draw *grown =
+		    (struct transparent_draw *)realloc(
+			*draws, new_capacity * sizeof(struct transparent_draw));
+		if (grown == NULL) {
+			return -1;
+		}
+		*draws = grown;
+		*capacity = new_capacity;
+	}
+	(*draws)[(*count)++] = draw;
+	return 0;
+}
+
+static void renderer_draw_transparent_pass(RendererContext *rctx,
+					   ecs_world_t *world, mat4s view)
+{
+	ecs_iter_t it = ecs_query_iter(world, rctx->render_query);
+	struct transparent_draw *draws = NULL;
+	size_t count = 0;
+	size_t capacity = 0;
+	bool out_of_memory = false;
+
+	while (!out_of_memory && ecs_query_next(&it)) {
+		Transform3D *t = ecs_field(&it, Transform3D, 0);
+		MeshRenderer *m = ecs_field(&it, MeshRenderer, 1);
+
+		for (int i = 0; i < it.count && !out_of_memory; i++) {
+			if (m[i].color.a == 255) {
+				continue;
+			}
+			struct transparent_draw draw;
+			draw.model = renderer_model_from_transform(&t[i]);
+			draw.color = renderer_color_to_vec4s(m[i].color);
+			draw.mesh = m[i].type == PRIMITIVE_CUBE
+					 ? &rctx->cube_mesh
+					 : &rctx->sphere_mesh;
+			vec4s world_pos = {
+			    {draw.model.raw[3][0], draw.model.raw[3][1],
+			     draw.model.raw[3][2], 1.0f}};
+			vec4s view_pos = glms_mat4_mulv(view, world_pos);
+			draw.depth = -view_pos.raw[2];
+			if (transparent_draw_push(&draws, &count, &capacity,
+						  draw) != 0) {
+				out_of_memory = true;
+			}
+		}
+	}
+
+	for (size_t i = 1; i < count; i++) {
+		struct transparent_draw key = draws[i];
+		size_t j = i;
+		while (j > 0 && draws[j - 1].depth < key.depth) {
+			draws[j] = draws[j - 1];
+			j--;
+		}
+		draws[j] = key;
+	}
+
+	for (size_t i = 0; i < count; i++) {
+		renderer_draw_mesh(rctx, draws[i].mesh, draws[i].model,
+				   draws[i].color);
+	}
+	free(draws);
 }
 
 static void renderer_draw_primitives(RendererContext *rctx, mat4s view,
@@ -328,12 +408,12 @@ static void renderer_draw_primitives(RendererContext *rctx, mat4s view,
 	glUniform3f(rctx->prim_light_loc, light_view.raw[0], light_view.raw[1],
 		    light_view.raw[2]);
 
-	renderer_draw_primitives_pass(rctx, world, false);
+	renderer_draw_opaque_pass(rctx, world);
 
 	glDepthMask(GL_FALSE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	renderer_draw_primitives_pass(rctx, world, true);
+	renderer_draw_transparent_pass(rctx, world, view);
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
 }
