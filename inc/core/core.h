@@ -5,11 +5,11 @@
 #include "renderer/renderer.h"
 #include <flecs.h>
 #include <stdint.h>
-struct nk_context;
+struct mu_Context;
 struct SDL_Window;
 
 typedef struct CoreContext {
-	struct nk_context *nk_ctx;
+	struct mu_Context *mu_ctx;
 	ecs_world_t *world;
 	ecs_query_t *hierarchy_query;
 	ecs_entity_t selected_entity;

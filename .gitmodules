@@ -7,9 +7,9 @@
 [submodule "vendor/cglm"]
 	path = vendor/cglm
 	url = https://github.com/recp/cglm.git
-[submodule "vendor/Nuklear"]
-	path = vendor/Nuklear
-	url = https://github.com/Immediate-Mode-UI/Nuklear.git
 [submodule "vendor/SDL"]
 	path = vendor/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "vendor/microui"]
+	path = vendor/microui
+	url = https://github.com/rxi/microui.git

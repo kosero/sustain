@@ -23,6 +23,39 @@ static void editor_camera_recompute_target(EditorCamera *cam)
 	    glms_vec3_add(cam->camera.position, editor_camera_forward(cam));
 }
 
+static vec3s editor_camera_keyboard_movement(vec3s forward, vec3s right)
+{
+	vec3s movement = {{0.0f, 0.0f, 0.0f}};
+	if (input_key_down(SDL_SCANCODE_W)) {
+		movement = glms_vec3_add(movement, forward);
+	}
+	if (input_key_down(SDL_SCANCODE_S)) {
+		movement = glms_vec3_sub(movement, forward);
+	}
+	if (input_key_down(SDL_SCANCODE_D)) {
+		movement = glms_vec3_add(movement, right);
+	}
+	if (input_key_down(SDL_SCANCODE_A)) {
+		movement = glms_vec3_sub(movement, right);
+	}
+	if (input_key_down(SDL_SCANCODE_E)) {
+		movement.raw[1] += 1.0f;
+	}
+	if (input_key_down(SDL_SCANCODE_Q)) {
+		movement.raw[1] -= 1.0f;
+	}
+	return movement;
+}
+
+static void editor_camera_apply_movement(EditorCamera *cam, float move_speed)
+{
+	vec3s forward = editor_camera_forward(cam);
+	vec3s right = editor_camera_right(cam);
+	vec3s movement = editor_camera_keyboard_movement(forward, right);
+	cam->camera.position = glms_vec3_add(
+	    cam->camera.position, glms_vec3_scale(movement, move_speed));
+}
+
 void editor_camera_init(EditorCamera *cam)
 {
 	cam->camera.position = (vec3s){{10.0f, 10.0f, 10.0f}};
@@ -54,38 +87,8 @@ void editor_camera_update(EditorCamera *cam, bool is_hovered)
 	}
 
 	if (cam->is_moving) {
-		float move_speed = 10.0f * core_get_delta_time();
-
-		if (input_key_down(SDL_SCANCODE_W)) {
-			cam->camera.position = glms_vec3_add(
-			    cam->camera.position,
-			    glms_vec3_scale(editor_camera_forward(cam),
-					    move_speed));
-		}
-		if (input_key_down(SDL_SCANCODE_S)) {
-			cam->camera.position = glms_vec3_add(
-			    cam->camera.position,
-			    glms_vec3_scale(editor_camera_forward(cam),
-					    -move_speed));
-		}
-		if (input_key_down(SDL_SCANCODE_D)) {
-			cam->camera.position = glms_vec3_add(
-			    cam->camera.position,
-			    glms_vec3_scale(editor_camera_right(cam),
-					    move_speed));
-		}
-		if (input_key_down(SDL_SCANCODE_A)) {
-			cam->camera.position = glms_vec3_add(
-			    cam->camera.position,
-			    glms_vec3_scale(editor_camera_right(cam),
-					    -move_speed));
-		}
-		if (input_key_down(SDL_SCANCODE_E)) {
-			cam->camera.position.raw[1] += move_speed;
-		}
-		if (input_key_down(SDL_SCANCODE_Q)) {
-			cam->camera.position.raw[1] -= move_speed;
-		}
+		editor_camera_apply_movement(cam,
+					     10.0f * core_get_delta_time());
 
 		cam->yaw += input_mouse_delta_x() * CAMERA_MOUSE_SENSITIVITY;
 		cam->pitch -= input_mouse_delta_y() * CAMERA_MOUSE_SENSITIVITY;

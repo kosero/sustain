@@ -39,6 +39,10 @@ set(FLECS_SHARED OFF CACHE BOOL "" FORCE)
 set(FLECS_STATIC ON  CACHE BOOL "" FORCE)
 add_subdirectory(vendor/flecs)
 
+# microui
+add_library(microui STATIC ${PROJECT_SOURCE_DIR}/vendor/microui/src/microui.c)
+target_include_directories(microui PUBLIC ${PROJECT_SOURCE_DIR}/vendor/microui/src)
+
 set(SHADER_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_custom_command(
     OUTPUT ${SHADER_OUT_DIR}/shaders_generated.c
@@ -76,7 +80,7 @@ set(SOURCES
     src/renderer/mesh.c
     src/renderer/shader.c
     src/ecs/components.c
-    src/gui/nuklear_impl.c
+    src/gui/microui_impl.c
     src/gui/gui.c
     src/gui/panel_hierarchy.c
     src/gui/panel_viewport.c
@@ -95,7 +99,6 @@ target_include_directories(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     SYSTEM PRIVATE
         ${PROJECT_SOURCE_DIR}/vendor/cglm/include
-        ${PROJECT_SOURCE_DIR}/vendor/Nuklear
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -104,6 +107,7 @@ target_link_libraries(${PROJECT_NAME}
         cglm
         glad_gen
         flecs_static
+        microui
 )
 
 find_program(CLANG_TIDY_EXE NAMES clang-tidy REQUIRED)

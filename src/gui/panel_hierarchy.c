@@ -4,24 +4,65 @@
 #include "ecs/components.h"
 #include "flecs.h"
 #include "flecs/private/api_defines.h"
-#include "nuklear.h"
+#include "microui.h"
 
 enum { NODE_STACK_CAPACITY = 256 };
+enum { TREE_STATE_CAPACITY = 256 };
+
+enum {
+	TREE_ROW_ICON_CLICKED = (1 << 0),
+	TREE_ROW_CLICKED = (1 << 1),
+};
 
 struct node_task {
 	ecs_entity_t entity;
+	int level;
 	bool close;
 };
 
 static bool node_task_push(struct node_task *stack, int *depth,
-			   ecs_entity_t entity, bool close)
+			   ecs_entity_t entity, int level, bool close)
 {
 	if (*depth >= NODE_STACK_CAPACITY) {
 		return false;
 	}
-	stack[(*depth)++] =
-	    (struct node_task){.entity = entity, .close = close};
+	stack[(*depth)++] = (struct node_task){
+	    .entity = entity, .level = level, .close = close};
 	return true;
+}
+
+struct tree_state_entry {
+	ecs_entity_t entity;
+	bool expanded;
+};
+
+static struct tree_state_entry *get_tree_state_table(void)
+{
+	static struct tree_state_entry states[TREE_STATE_CAPACITY];
+	return states;
+}
+
+static int *get_tree_state_count(void)
+{
+	static int count = 0;
+	return &count;
+}
+
+static bool *tree_state_lookup(ecs_entity_t entity)
+{
+	struct tree_state_entry *states = get_tree_state_table();
+	int *count = get_tree_state_count();
+	for (int i = 0; i < *count; i++) {
+		if (states[i].entity == entity) {
+			return &states[i].expanded;
+		}
+	}
+	if (*count >= TREE_STATE_CAPACITY) {
+		return NULL;
+	}
+	states[*count].entity = entity;
+	states[*count].expanded = false;
+	return &states[(*count)++].expanded;
 }
 
 static const char *node_name(ecs_world_t *world, ecs_entity_t entity)
@@ -52,160 +93,163 @@ static int collect_gameobject_children(CoreContext *ctx, ecs_entity_t parent,
 	return count;
 }
 
-static void handle_node_selection(CoreContext *ctx, ecs_entity_t entity,
-				  nk_bool is_selected, nk_bool was_selected)
+static int draw_tree_row(mu_Context *mu, ecs_entity_t entity, const char *label,
+			 int level, bool has_children, bool expanded,
+			 bool *selected)
 {
-	if (is_selected && !was_selected) {
+	int row_h = mu->style->size.y + (mu->style->padding * 2);
+	mu_Rect r;
+	if (level > 0) {
+		int widths[2] = {level * mu->style->indent, -1};
+		mu_layout_row(mu, 2, widths, row_h);
+		mu_layout_next(mu);
+		r = mu_layout_next(mu);
+	} else {
+		int width = -1;
+		mu_layout_row(mu, 1, &width, row_h);
+		r = mu_layout_next(mu);
+	}
+
+	mu_push_id(mu, &entity, sizeof(entity));
+	mu_Id icon_id = mu_get_id(mu, "icon", 4);
+	mu_Id row_id = mu_get_id(mu, "row", 3);
+	mu_pop_id(mu);
+
+	mu_Rect icon_r = mu_rect(r.x, r.y, r.h, r.h);
+	mu_Rect row_r = r;
+	if (has_children) {
+		row_r.x += r.h;
+		row_r.w -= r.h;
+	}
+
+	int flags = 0;
+
+	if (has_children) {
+		mu_update_control(mu, icon_id, icon_r, 0);
+		if (mu->mouse_pressed == MU_MOUSE_LEFT &&
+		    mu->focus == icon_id) {
+			flags |= TREE_ROW_ICON_CLICKED;
+		}
+	}
+
+	mu_update_control(mu, row_id, row_r, 0);
+	if (mu->mouse_pressed == MU_MOUSE_LEFT && mu->focus == row_id) {
+		*selected = (bool)(!*selected);
+		flags |= TREE_ROW_CLICKED;
+	}
+
+	if (*selected) {
+		mu_draw_rect(mu, r, mu_color(65, 105, 225, 160));
+	} else if (mu->hover == row_id) {
+		mu_draw_rect(mu, r, mu_color(255, 255, 255, 24));
+	}
+
+	if (has_children) {
+		mu_draw_icon(
+		    mu, (int)expanded ? MU_ICON_EXPANDED : MU_ICON_COLLAPSED,
+		    icon_r, mu->style->colors[MU_COLOR_TEXT]);
+	}
+
+	mu_Rect text_r = mu_rect(r.x + r.h + mu->style->padding, r.y,
+				 r.w - r.h - mu->style->padding, r.h);
+	mu_draw_control_text(mu, label, text_r, MU_COLOR_TEXT, 0);
+
+	return flags;
+}
+
+static void handle_tree_selection(CoreContext *ctx, ecs_entity_t entity,
+				  const char *name, bool selected)
+{
+	if (selected) {
 		ctx->selected_entity = entity;
-		log_printf(LOG_LEVEL_INFO, "selected '%s' (id %llu)",
-			   node_name(ctx->world, entity),
+		log_printf(LOG_LEVEL_INFO, "selected '%s' (id %llu)", name,
 			   (unsigned long long)entity);
-	} else if (!is_selected && was_selected) {
+	} else {
 		ctx->selected_entity = 0;
-		log_printf(LOG_LEVEL_INFO, "deselected '%s' (id %llu)",
-			   node_name(ctx->world, entity),
+		log_printf(LOG_LEVEL_INFO, "deselected '%s' (id %llu)", name,
 			   (unsigned long long)entity);
 	}
 }
 
-typedef struct {
-	struct nk_style_item sel_normal, sel_hover, sel_pressed;
-	struct nk_style_item sel_normal_act, sel_hover_act, sel_pressed_act;
-	struct nk_style_item tab_bg;
-	struct nk_style_item min_norm, min_hov, min_act;
-	struct nk_style_item max_norm, max_hov, max_act;
-} TreeStyleBackup;
-
-static TreeStyleBackup push_transparent_tree_style(struct nk_context *nk)
+static void push_children(struct node_task *stack, int *depth,
+			  ecs_entity_t *children, int child_count, int level)
 {
-	TreeStyleBackup b = {
-	    .sel_normal = nk->style.selectable.normal,
-	    .sel_hover = nk->style.selectable.hover,
-	    .sel_pressed = nk->style.selectable.pressed,
-	    .sel_normal_act = nk->style.selectable.normal_active,
-	    .sel_hover_act = nk->style.selectable.hover_active,
-	    .sel_pressed_act = nk->style.selectable.pressed_active,
-	    .tab_bg = nk->style.tab.background,
-	    .min_norm = nk->style.tab.node_minimize_button.normal,
-	    .min_hov = nk->style.tab.node_minimize_button.hover,
-	    .min_act = nk->style.tab.node_minimize_button.active,
-	    .max_norm = nk->style.tab.node_maximize_button.normal,
-	    .max_hov = nk->style.tab.node_maximize_button.hover,
-	    .max_act = nk->style.tab.node_maximize_button.active,
-	};
-
-	struct nk_style_item clear = nk_style_item_color(nk_rgba(0, 0, 0, 0));
-
-	nk->style.selectable.normal = clear;
-	nk->style.selectable.hover = clear;
-	nk->style.selectable.pressed = clear;
-	nk->style.selectable.normal_active = clear;
-	nk->style.selectable.hover_active = clear;
-	nk->style.selectable.pressed_active = clear;
-
-	nk->style.tab.background = clear;
-	nk->style.tab.node_minimize_button.normal = clear;
-	nk->style.tab.node_minimize_button.hover = clear;
-	nk->style.tab.node_minimize_button.active = clear;
-	nk->style.tab.node_maximize_button.normal = clear;
-	nk->style.tab.node_maximize_button.hover = clear;
-	nk->style.tab.node_maximize_button.active = clear;
-
-	return b;
+	node_task_push(stack, depth, 0, level, true);
+	for (int i = child_count - 1; i >= 0; i--) {
+		node_task_push(stack, depth, children[i], level + 1, false);
+	}
 }
 
-static void pop_transparent_tree_style(struct nk_context *nk,
-				       const TreeStyleBackup *b)
+static void process_tree_node(CoreContext *ctx, struct node_task *stack,
+			      int *depth, ecs_entity_t entity, int level)
 {
-	nk->style.selectable.normal = b->sel_normal;
-	nk->style.selectable.hover = b->sel_hover;
-	nk->style.selectable.pressed = b->sel_pressed;
-	nk->style.selectable.normal_active = b->sel_normal_act;
-	nk->style.selectable.hover_active = b->sel_hover_act;
-	nk->style.selectable.pressed_active = b->sel_pressed_act;
+	mu_Context *mu = ctx->mu_ctx;
+	const char *name = node_name(ctx->world, entity);
 
-	nk->style.tab.background = b->tab_bg;
-	nk->style.tab.node_minimize_button.normal = b->min_norm;
-	nk->style.tab.node_minimize_button.hover = b->min_hov;
-	nk->style.tab.node_minimize_button.active = b->min_act;
-	nk->style.tab.node_maximize_button.normal = b->max_norm;
-	nk->style.tab.node_maximize_button.hover = b->max_hov;
-	nk->style.tab.node_maximize_button.active = b->max_act;
+	ecs_entity_t children[NODE_STACK_CAPACITY];
+	int child_count = collect_gameobject_children(ctx, entity, children,
+						      NODE_STACK_CAPACITY);
+	bool has_children = child_count > 0;
+
+	bool *expanded_ptr = tree_state_lookup(entity);
+	bool expanded = false;
+	if (expanded_ptr != NULL) {
+		expanded = *expanded_ptr;
+	}
+	bool selected = (ctx->selected_entity == entity);
+
+	int flags = draw_tree_row(mu, entity, name, level, has_children,
+				  expanded, &selected);
+
+	if ((flags & TREE_ROW_ICON_CLICKED) && expanded_ptr != NULL) {
+		*expanded_ptr = (bool)(!*expanded_ptr);
+		expanded = *expanded_ptr;
+	}
+
+	if (flags & TREE_ROW_CLICKED) {
+		handle_tree_selection(ctx, entity, name, selected);
+	}
+
+	if (expanded && has_children &&
+	    *depth + 1 + child_count < NODE_STACK_CAPACITY) {
+		push_children(stack, depth, children, child_count, level);
+	}
 }
 
-static void draw_entity_node(CoreContext *ctx, ecs_entity_t root)
+static void draw_entity_tree(CoreContext *ctx, ecs_entity_t root)
 {
 	struct node_task stack[NODE_STACK_CAPACITY];
 	int depth = 0;
-	if (!node_task_push(stack, &depth, root, false)) {
+	if (!node_task_push(stack, &depth, root, 0, false)) {
 		return;
 	}
 
-	struct nk_context *nk = ctx->nk_ctx;
-
-	TreeStyleBackup style_backup = push_transparent_tree_style(nk);
-
 	while (depth > 0) {
 		struct node_task task = stack[--depth];
-
 		if (task.close) {
-			nk_tree_element_pop(nk);
 			continue;
 		}
-
-		nk_bool is_selected = (ctx->selected_entity == task.entity);
-		nk_bool was_selected = is_selected;
-
-		struct nk_rect row_bounds = nk_widget_bounds(nk);
-
-		if (is_selected) {
-			struct nk_command_buffer *canvas =
-			    nk_window_get_canvas(nk);
-			nk_fill_rect(canvas, row_bounds, 2.0f,
-				     nk_rgba(65, 105, 225, 120));
-		}
-
-		if (nk_tree_element_push_id(
-			nk, NK_TREE_NODE, node_name(ctx->world, task.entity),
-			NK_MINIMIZED, &is_selected, (int)task.entity)) {
-			ecs_entity_t children[NODE_STACK_CAPACITY];
-			int child_count = collect_gameobject_children(
-			    ctx, task.entity, children, NODE_STACK_CAPACITY);
-
-			if (depth + 1 + child_count < NODE_STACK_CAPACITY) {
-				node_task_push(stack, &depth, 0, true);
-				for (int i = child_count - 1; i >= 0; i--) {
-					node_task_push(stack, &depth,
-						       children[i], false);
-				}
-			}
-		}
-
-		handle_node_selection(ctx, task.entity, is_selected,
-				      was_selected);
+		process_tree_node(ctx, stack, &depth, task.entity, task.level);
 	}
-
-	pop_transparent_tree_style(nk, &style_backup);
 }
 
 void gui_panel_hierarchy(CoreContext *ctx)
 {
-	if (nk_group_begin(ctx->nk_ctx, "Hierarchy",
-			   NK_WINDOW_BORDER | NK_WINDOW_TITLE)) {
-		nk_layout_row_dynamic(ctx->nk_ctx, 1, 1);
+	mu_Context *mu = ctx->mu_ctx;
+	mu_begin_panel_ex(mu, "Hierarchy", 0);
 
-		if (nk_tree_push(ctx->nk_ctx, NK_TREE_TAB, "RootScene",
-				 NK_MAXIMIZED)) {
-			ecs_iter_t it =
-			    ecs_query_iter(ctx->world, ctx->hierarchy_query);
-			while (ecs_query_next(&it)) {
-				for (int i = 0; i < it.count; i++) {
-					draw_entity_node(ctx, it.entities[i]);
-				}
+	int width = -1;
+	mu_layout_row(mu, 1, &width, 0);
+
+	if (mu_header(mu, "RootScene")) {
+		ecs_iter_t it =
+		    ecs_query_iter(ctx->world, ctx->hierarchy_query);
+		while (ecs_query_next(&it)) {
+			for (int i = 0; i < it.count; i++) {
+				draw_entity_tree(ctx, it.entities[i]);
 			}
-			nk_tree_pop(ctx->nk_ctx);
 		}
-
-		nk_group_end(ctx->nk_ctx);
 	}
+
+	mu_end_panel(mu);
 }

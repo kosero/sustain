@@ -9,8 +9,7 @@
 #include "core/log.h"
 #include "ecs/components.h"
 #include "gui/gui.h"
-#include "gui/nuklear_impl.h"
-#include <nuklear.h>
+#include "gui/microui_impl.h"
 
 static CoreContext **get_core_context_ptr_internal(void)
 {
@@ -66,10 +65,10 @@ int core_context_init(void)
 {
 	CoreContext *ctx = get_core_context();
 
-	int font_size = 16;
-	ctx->nk_ctx = nuklear_init(font_size);
-	if (ctx->nk_ctx == NULL) {
-		log_printf(LOG_LEVEL_ERROR, "nuklear init failed");
+	int font_size = 18;
+	ctx->mu_ctx = microui_init(font_size);
+	if (ctx->mu_ctx == NULL) {
+		log_printf(LOG_LEVEL_ERROR, "microui init failed");
 		return -1;
 	}
 
@@ -210,8 +209,8 @@ static void core_close_window(CoreContext *ctx)
 	renderer_context_cleanup(&ctx->renderer);
 	log_printf(LOG_LEVEL_DEBUG, "ecs cleanup");
 	ecs_fini(ctx->world);
-	log_printf(LOG_LEVEL_DEBUG, "nuklear cleanup");
-	nuklear_shutdown(ctx->nk_ctx);
+	log_printf(LOG_LEVEL_DEBUG, "microui cleanup");
+	microui_shutdown(ctx->mu_ctx);
 
 	core_sdl_cleanup();
 	log_printf(LOG_LEVEL_INFO, "shutdown complete");
@@ -279,7 +278,7 @@ static void core_loop_render(CoreContext *ctx)
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	nuklear_render(ctx->nk_ctx, w->width, w->height);
+	microui_render(ctx->mu_ctx, w->width, w->height);
 
 	if (ctx->renderer.viewport_initialized) {
 		renderer_blit_viewport(&ctx->renderer,
@@ -297,16 +296,15 @@ static void core_loop(CoreContext *ctx)
 		core_update_delta_time();
 		input_frame_begin();
 
-		nk_input_begin(ctx->nk_ctx);
 		SDL_Event evt;
 		while (SDL_PollEvent(&evt)) {
-			nuklear_handle_event(ctx->nk_ctx, &evt);
+			microui_handle_event(ctx->mu_ctx, &evt);
 			input_handle_event(&evt);
 		}
-		nk_input_end(ctx->nk_ctx);
 
 		core_loop_update(ctx);
 		core_loop_render_ui(ctx);
+		microui_update_text_input(ctx->mu_ctx);
 		core_loop_render(ctx);
 
 		SDL_GL_SwapWindow(*get_window_ptr_internal());

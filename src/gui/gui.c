@@ -3,43 +3,44 @@
 #include "gui/panel_hierarchy.h"
 #include "gui/panel_properties.h"
 #include "gui/panel_viewport.h"
-#include "nuklear.h"
+#include "microui.h"
 
-static const float gui_panel_width = 350.0f;
+static const int gui_panel_width = 350;
+
+static void force_root_window_rect(mu_Context *mu, int width, int height)
+{
+	mu_Container *root = mu_get_container(mu, "EditorRoot");
+	if (root != NULL) {
+		root->rect = mu_rect(0, 0, width, height);
+	}
+}
 
 void gui_render_ui(CoreContext *ctx)
 {
+	mu_Context *mu = ctx->mu_ctx;
 	WindowProperty *w = get_window_property();
-	float screen_w = (float)w->width;
-	float screen_h = (float)w->height;
+	int screen_w = w->width;
+	int screen_h = w->height;
 
-	if (nk_begin(ctx->nk_ctx, "EditorRoot",
-		     nk_rect(0, 0, screen_w, screen_h),
-		     NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_BACKGROUND)) {
-		struct nk_rect content =
-		    nk_window_get_content_region(ctx->nk_ctx);
-		float row_h = content.h;
+	mu_begin(mu);
+	force_root_window_rect(mu, screen_w, screen_h);
 
-		nk_layout_row_begin(ctx->nk_ctx, NK_STATIC, row_h, 3);
+	if (mu_begin_window_ex(
+		mu, "EditorRoot", mu_rect(0, 0, screen_w, screen_h),
+		MU_OPT_NOFRAME | MU_OPT_NOTITLE | MU_OPT_NORESIZE |
+		    MU_OPT_NOCLOSE | MU_OPT_NOSCROLL)) {
+		mu_Container *root = mu_get_current_container(mu);
+		int spacing = mu->style->spacing;
+		int middle_w = mu_max(
+		    root->body.w - (gui_panel_width * 2) - (spacing * 2), 1);
+		int widths[3] = {gui_panel_width, middle_w, gui_panel_width};
+		mu_layout_row(mu, 3, widths, -1);
 
-		// left panel
-		nk_layout_row_push(ctx->nk_ctx, gui_panel_width);
 		gui_panel_hierarchy(ctx);
-
-		// center viewport
-		float viewport_w = content.w - (gui_panel_width * 2.0f);
-		if (viewport_w < 1.0f) {
-			viewport_w = 1.0f;
-		}
-		nk_layout_row_push(ctx->nk_ctx, viewport_w);
 		gui_panel_viewport(ctx);
-
-		// right panel
-		nk_layout_row_push(ctx->nk_ctx, gui_panel_width);
 		gui_panel_properties(ctx);
-
-		nk_layout_row_end(ctx->nk_ctx);
 	}
+	mu_end_window(mu);
 
-	nk_end(ctx->nk_ctx);
+	mu_end(mu);
 }
