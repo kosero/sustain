@@ -14,6 +14,10 @@ SDL_DIR 		:= vendor/SDL
 SDL_BUILD   := $(SDL_DIR)/build
 SDL_LIB     := $(SDL_BUILD)/libSDL3.a
 
+# cglm
+CGLM_DIR    := vendor/cglm
+CGLM_BUILD  := $(CGLM_DIR)/build
+CGLM_LIB    := $(CGLM_BUILD)/libcglm.a
 
 WARNINGS		:= -Wall -Wextra -Wpedantic -Wshadow -Wconversion \
                -Wsign-conversion -Wcast-align -Wformat=2 \
@@ -21,8 +25,8 @@ WARNINGS		:= -Wall -Wextra -Wpedantic -Wshadow -Wconversion \
 
 CXXFLAGS 		:= -D_POSIX_C_SOURCE=200809L -I$(INC_DIR) -I$(SDL_DIR)/include -MMD -MP
 CFLAGS 			:= $(STD) $(WARNINGS)
-LDFLAGS 		:= -L$(SDL_BUILD)
-LDLIBS			:= -lSDL3 -lm -lpthread -ldl
+LDFLAGS 		:= -L$(SDL_BUILD) -L$(CGLM_BUILD)
+LDLIBS			:= -lSDL3 -lcglm -lm -lpthread -ldl
 
 MODE 				?= release
 
@@ -47,7 +51,11 @@ $(SDL_LIB):
 	cmake -S $(SDL_DIR) -B $(SDL_BUILD) -DSDL_STATIC=ON -DSDL_SHARED=OFF -DSDL_X11_XSCRNSAVER=OFF -DSDL_X11_XTEST=OFF
 	cmake --build $(SDL_BUILD) --parallel
 
-$(TARGET): $(SDL_LIB) $(OBJS)
+$(CGLM_LIB):
+	meson setup $(CGLM_BUILD) $(CGLM_DIR) -Ddefault_library=static
+	ninja -C $(CGLM_BUILD)
+
+$(TARGET): $(SDL_LIB) $(CGLM_LIB) $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $@ $(LDLIBS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
