@@ -1,0 +1,5 @@
+#ifndef SUSTAIN_RHI_VULKAN_H
+#define SUSTAIN_RHI_VULKAN_H
+
+
+#endif // SUSTAIN_RHI_VULKAN_H

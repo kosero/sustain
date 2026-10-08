@@ -1,5 +1,5 @@
-#ifndef SUSTAIN_CORE_H
-#define SUSTAIN_CORE_H
+#ifndef SUSTAIN_H
+#define SUSTAIN_H
 
 #include <stdint.h>
 
@@ -14,4 +14,4 @@ void close_window(void);
 void frame_clear(Color color);
 void next_frame(void);
 
-#endif // SUSTAIN_CORE_H
+#endif // SUSTAIN_H
