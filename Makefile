@@ -42,11 +42,17 @@ ifeq ($(MODE),asan)
     SO_LDFLAGS += -fsanitize=address,undefined
 endif
 
+SHADER_FILES := $(wildcard shaders/*)
+SHADER_SRCS  := $(patsubst shaders/%,$(BUILD_DIR)/$(MODE)/generated/shaders/%.c,$(SHADER_FILES))
+SRCS        += $(SHADER_SRCS)
+
 OBJ_S       := $(patsubst %.c,$(BUILD_DIR)/$(MODE)/static/%.o,$(SRCS))
 OBJ_D       := $(patsubst %.c,$(BUILD_DIR)/$(MODE)/shared/%.o,$(SRCS))
 DEPS        := $(OBJ_S:.o=.d) $(OBJ_D:.o=.d)
 
 .PHONY: all static shared deps clean debug release asan format lint help
+
+.SECONDARY: $(SHADER_SRCS)
 
 all: static shared
 
@@ -67,6 +73,12 @@ $(BUILD_DIR)/$(MODE)/static/%.o: %.c
 $(BUILD_DIR)/$(MODE)/shared/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -fPIC -c $< -o $@
+
+$(BUILD_DIR)/$(MODE)/generated/shaders/%.c: shaders/%
+	@mkdir -p $(dir $@)
+	@echo 'const char $(subst .,_,$*)_src[] =' > $@
+	@sed 's/["\\]/\\&/g; s/.*/    "&\\n"/' $< >> $@
+	@echo ';' >> $@
 
 deps: $(SDL_LIB)
 

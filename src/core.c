@@ -12,3 +12,8 @@ void close_window(void) { SDL_Quit(); }
 void frame_clear(Color color) { rhi()->clear(color); }
 
 void next_frame(void) { rhi()->present(); }
+
+void draw_pixel(int x, int y, Color color)
+{
+	rhi()->draw_pixel(x, y, color);
+}

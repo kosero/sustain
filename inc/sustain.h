@@ -40,6 +40,7 @@ void process_events(void);
 
 void frame_clear(Color color);
 void next_frame(void);
+void draw_pixel(int x, int y, Color color);
 
 typedef enum Key {
 	KEY_UNKNOWN = 0,

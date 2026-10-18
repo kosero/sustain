@@ -5,4 +5,7 @@
 
 extern const RHI_Ops gl_ops;
 
+extern const char pixel_vert_src[];
+extern const char pixel_frag_src[];
+
 #endif // SUSTAIN_RHI_OPENGL_H
