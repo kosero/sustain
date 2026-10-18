@@ -15,13 +15,25 @@ typedef struct Mat4 {
 	float m[16];
 } Mat4;
 
+typedef struct Rect {
+	float x;
+	float y;
+	float w;
+	float h;
+} Rect;
+
 Vec2 vec2(float x, float y);
 Vec2 vec2_add(Vec2 a, Vec2 b);
 Vec2 vec2_sub(Vec2 a, Vec2 b);
 Vec2 vec2_scale(Vec2 v, float s);
 
+Rect rect(float x, float y, float w, float h);
+float rect_right(Rect r);
+float rect_bottom(Rect r);
+int rect_intersect(Rect a, Rect b);
+
 int init_window(uint32_t width, uint32_t height, const char *title);
-int window_quit(void);
+int window_should_quit(void);
 void close_window(void);
 
 void process_events(void);

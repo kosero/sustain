@@ -237,4 +237,4 @@ void process_events(void)
 	}
 }
 
-int window_quit(void) { return input_context()->quit; }
+int window_should_quit(void) { return input_context()->quit; }

@@ -5,7 +5,7 @@ int main(void)
 {
 	assert(init_window(800, 600, "basic window") == 0);
 
-	while (!window_quit()) {
+	while (!window_should_quit()) {
 		process_events();
 
 		if (input_key_pressed(KEY_ESCAPE)) {
