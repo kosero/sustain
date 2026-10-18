@@ -6,7 +6,8 @@ SRC_DIR     := src
 INC_DIR     := inc
 BUILD_DIR   := build
 
-SRCS        := $(shell find $(SRC_DIR) -name '*.c')
+GLAD_SRC    := vendor/glad/src/gl.c
+SRCS        := $(shell find $(SRC_DIR) -name '*.c') $(GLAD_SRC)
 
 CC          := cc
 AR          := ar
@@ -22,7 +23,7 @@ WARNINGS    := -Wall -Wextra -Wpedantic -Wshadow -Wconversion \
                -Wundef -Wstrict-prototypes -Wmissing-prototypes
 
 CPPFLAGS    := -D_POSIX_C_SOURCE=200809L -I$(INC_DIR) -I$(SDL_DIR)/include \
-               -MMD -MP
+               -Ivendor/glad/include -MMD -MP
 CFLAGS      := $(STD) $(WARNINGS)
 SO_LDFLAGS  := -shared -Wl,-soname,$(LIB_SHARED)
 
@@ -41,8 +42,8 @@ ifeq ($(MODE),asan)
     SO_LDFLAGS += -fsanitize=address,undefined
 endif
 
-OBJ_S       := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/$(MODE)/static/%.o,$(SRCS))
-OBJ_D       := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/$(MODE)/shared/%.o,$(SRCS))
+OBJ_S       := $(patsubst %.c,$(BUILD_DIR)/$(MODE)/static/%.o,$(SRCS))
+OBJ_D       := $(patsubst %.c,$(BUILD_DIR)/$(MODE)/shared/%.o,$(SRCS))
 DEPS        := $(OBJ_S:.o=.d) $(OBJ_D:.o=.d)
 
 .PHONY: all static shared deps clean debug release asan format lint help
@@ -59,11 +60,11 @@ $(LIB_SHARED): $(OBJ_D) $(SDL_LIB)
 	$(CC) $(SO_LDFLAGS) $(OBJ_D) -o $@ \
 	      -L$(SDL_BUILD) -lSDL3 -lm -lpthread -ldl
 
-$(BUILD_DIR)/$(MODE)/static/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/$(MODE)/static/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/$(MODE)/shared/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/$(MODE)/shared/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -fPIC -c $< -o $@
 
@@ -91,7 +92,7 @@ format:
 	clang-format -i $(shell find $(SRC_DIR) $(INC_DIR) -name '*.c' -o -name '*.h')
 
 lint:
-	clang-tidy $(SRCS) -- $(CPPFLAGS) $(CFLAGS)
+	clang-tidy $(filter $(SRC_DIR)/%,$(SRCS)) -- $(CPPFLAGS) $(CFLAGS)
 
 help:
 	@echo "Available targets:"

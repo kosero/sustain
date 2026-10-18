@@ -1,7 +1,6 @@
 #include "dev/sdl_context.h"
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_log.h"
-#include "SDL3/SDL_render.h"
 
 static SDL_Context *sdl_context(void)
 {
@@ -14,9 +13,9 @@ int sdl_context_init(const char *title, int w, int h, SDL_WindowFlags flags)
 {
 	SDL_Context *ctx = get_sdl_context();
 
-	if (!SDL_CreateWindowAndRenderer(title, w, h, flags, &ctx->window,
-					 &ctx->renderer)) {
-		SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
+	ctx->window = SDL_CreateWindow(title, w, h, flags);
+	if (ctx->window == NULL) {
+		SDL_Log("Couldn't create window: %s", SDL_GetError());
 		return -1;
 	}
 

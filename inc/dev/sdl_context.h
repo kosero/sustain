@@ -1,11 +1,9 @@
 #ifndef SUSTAIN_SDL_CONTEXT_H
 #define SUSTAIN_SDL_CONTEXT_H
 
-#include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
 
 typedef struct SDL_Context {
-	SDL_Renderer *renderer;
 	SDL_Window *window;
 } SDL_Context;
 
