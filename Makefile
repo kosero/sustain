@@ -17,17 +17,12 @@ SDL_DIR     := vendor/SDL
 SDL_BUILD   := $(SDL_DIR)/build
 SDL_LIB     := $(SDL_BUILD)/libSDL3.a
 
-# cglm
-CGLM_DIR    := vendor/cglm
-CGLM_BUILD  := $(CGLM_DIR)/build
-CGLM_LIB    := $(CGLM_BUILD)/libcglm.a
-
 WARNINGS    := -Wall -Wextra -Wpedantic -Wshadow -Wconversion \
                -Wsign-conversion -Wcast-align -Wformat=2 \
                -Wundef -Wstrict-prototypes -Wmissing-prototypes
 
 CPPFLAGS    := -D_POSIX_C_SOURCE=200809L -I$(INC_DIR) -I$(SDL_DIR)/include \
-               -I$(CGLM_DIR)/include -MMD -MP
+               -MMD -MP
 CFLAGS      := $(STD) $(WARNINGS)
 SO_LDFLAGS  := -shared -Wl,-soname,$(LIB_SHARED)
 
@@ -60,9 +55,9 @@ shared: $(LIB_SHARED)
 $(LIB_STATIC): $(OBJ_S)
 	$(AR) rcs $@ $^
 
-$(LIB_SHARED): $(OBJ_D) $(SDL_LIB) $(CGLM_LIB)
+$(LIB_SHARED): $(OBJ_D) $(SDL_LIB)
 	$(CC) $(SO_LDFLAGS) $(OBJ_D) -o $@ \
-	      -L$(SDL_BUILD) -L$(CGLM_BUILD) -lSDL3 -lcglm -lm -lpthread -ldl
+	      -L$(SDL_BUILD) -lSDL3 -lm -lpthread -ldl
 
 $(BUILD_DIR)/$(MODE)/static/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
@@ -72,17 +67,13 @@ $(BUILD_DIR)/$(MODE)/shared/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -fPIC -c $< -o $@
 
-deps: $(SDL_LIB) $(CGLM_LIB)
+deps: $(SDL_LIB)
 
 $(SDL_LIB):
 	cmake -S $(SDL_DIR) -B $(SDL_BUILD) -DSDL_STATIC=ON -DSDL_SHARED=OFF \
 	      -DSDL_X11_XSCRNSAVER=OFF -DSDL_X11_XTEST=OFF \
 	      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 	cmake --build $(SDL_BUILD) --parallel
-
-$(CGLM_LIB):
-	meson setup $(CGLM_BUILD) $(CGLM_DIR) -Ddefault_library=static
-	ninja -C $(CGLM_BUILD)
 
 debug:
 	$(MAKE) MODE=debug
@@ -107,7 +98,7 @@ help:
 	@echo "  make          -> libsustain.a + libsustain.so (release)"
 	@echo "  make static   -> build libsustain.a only"
 	@echo "  make shared   -> build libsustain.so only"
-	@echo "  make deps     -> build SDL3 and cglm"
+	@echo "  make deps     -> build SDL3"
 	@echo "  make debug    -> debug build with -O0 -g3"
 	@echo "  make asan     -> build with AddressSanitizer + UBSan"
 	@echo "  make clean    -> remove build directory and libraries"

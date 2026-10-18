@@ -10,6 +10,6 @@ typedef struct SDL_Context {
 } SDL_Context;
 
 SDL_Context *get_sdl_context(void);
-void sdl_context_init(const char *title, int w, int h, SDL_WindowFlags flags);
+int sdl_context_init(const char *title, int w, int h, SDL_WindowFlags flags);
 
 #endif // SUSTAIN_SDL_CONTEXT_H
