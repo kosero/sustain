@@ -15,5 +15,10 @@ void next_frame(void) { rhi()->present(); }
 
 void draw_pixel(int x, int y, Color color)
 {
-	rhi()->draw_pixel(x, y, color);
+	rhi()->draw_rect(x, y, 1, 1, color);
+}
+
+void draw_rect(int x, int y, int w, int h, Color color)
+{
+	rhi()->draw_rect(x, y, w, h, color);
 }

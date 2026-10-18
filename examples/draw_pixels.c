@@ -14,6 +14,8 @@ int main(void)
 
 		frame_clear((Color){24, 24, 24, 255});
 
+		draw_rect(300, 225, 200, 150, (Color){40, 90, 160, 255});
+
 		for (int i = -20; i <= 20; i++) {
 			draw_pixel(400 + i, 300, (Color){255, 200, 0, 255});
 			draw_pixel(400, 300 + i, (Color){255, 200, 0, 255});

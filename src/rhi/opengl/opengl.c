@@ -136,7 +136,7 @@ static int gl_init(const char *title, int w, int h)
 		glViewport(0, 0, pw, ph);
 	}
 
-	glEnable(GL_DEPTH_TEST);
+	/* no depth test: 2D draws are painter-ordered */
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -160,16 +160,17 @@ static void gl_clear(Color color)
 
 static void gl_present(void) { SDL_GL_SwapWindow(get_sdl_context()->window); }
 
-static void gl_draw_pixel(int x, int y, Color color)
+static void gl_draw_rect(int x, int y, int w, int h, Color color)
 {
 	GL_State *state = gl_state();
 	float ox = (((float)x / (float)state->w) * 2.0f) - 1.0f;
-	float oy = 1.0f - (((float)(y + 1) / (float)state->h) * 2.0f);
+	float oy = 1.0f - (((float)(y + h) / (float)state->h) * 2.0f);
 
 	glUseProgram(state->program);
 	glUniform2f(state->offset_loc, ox, oy);
-	glUniform2f(state->size_loc, 2.0f / (float)state->w,
-		     2.0f / (float)state->h);
+	glUniform2f(state->size_loc,
+		     (((float)w / (float)state->w) * 2.0f),
+		     (((float)h / (float)state->h) * 2.0f));
 	glUniform4f(state->color_loc, (float)color.r / 255.0f,
 		     (float)color.g / 255.0f, (float)color.b / 255.0f,
 		     (float)color.a / 255.0f);
@@ -181,5 +182,5 @@ const RHI_Ops gl_ops = {
     .init = gl_init,
     .clear = gl_clear,
     .present = gl_present,
-    .draw_pixel = gl_draw_pixel,
+    .draw_rect = gl_draw_rect,
 };
